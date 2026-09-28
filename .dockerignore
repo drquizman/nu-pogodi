@@ -1,0 +1,11 @@
+node_modules
+dist
+.git
+.runtime
+.codex
+.agents
+*.log
+.env
+.env.*
+tests
+public/art/*.md

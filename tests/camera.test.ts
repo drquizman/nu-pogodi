@@ -1,0 +1,6 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { cameraConstraints, widestView } from '../src/camera';
+test('camera selection preserves device ID and requests uncropped frames',()=>{assert.deepEqual(cameraConstraints('rear-wide').deviceId,{exact:'rear-wide'});assert.deepEqual(cameraConstraints('rear-wide').resizeMode,{ideal:'none'});assert.equal(cameraConstraints('rear-wide').facingMode,undefined);});
+test('widest view uses actual hardware minimum instead of inventing 0.5 zoom',async()=>{const applied:any[]=[];const track={getCapabilities:()=>({zoom:{min:1,max:8},resizeMode:['none']}),getConstraints:()=>({deviceId:{exact:'rear'}}),applyConstraints:async(c:unknown)=>{applied.push(c);},getSettings:()=>({zoom:1})} as unknown as MediaStreamTrack;const message=await widestView(track);assert.equal(applied[0].resizeMode,'none');assert.equal(applied[1].advanced[0].zoom,1);assert.match(message,/1×/);});
+test('unsupported camera zoom is explained and no unsupported constraint applied',async()=>{const track={getCapabilities:()=>({}),getConstraints:()=>({}),applyConstraints:async()=>assert.fail('No capabilities, no constraints')} as unknown as MediaStreamTrack;assert.match(await widestView(track),/недоступен/);});

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: nu-pogodi-motion
+    runtime: docker
+    plan: free
+    healthCheckPath: /healthz
+    numInstances: 1
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 10000
