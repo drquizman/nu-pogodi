@@ -1,4 +1,5 @@
-import {hostConfig,createRoom,controllerUrl} from './backend';
+import {hostConfig,createRoom,controllerUrl,cloudEnabled} from './backend';
+import {Statistics} from './statistics';
 import { setText } from './ui';
 import QRCode from 'qrcode';
 import { Game, type Lane } from './core/game';
@@ -11,7 +12,11 @@ export async function mountHost() {
     document.getElementById('app')!.innerHTML = `
 <main class="desktop simple-game"><header><a class="brand" href="./">Ну, погоди!<span class="brand-sub">ЛОВИ ЯЙЦА РУКАМИ</span></a><div class="header-right"><span class="record">Рекорд <strong id="record">0</strong></span><button class="icon-button" id="sound">Звук: вкл. ♪</button></div></header>
 <div class="play-layout"><section class="console" aria-label="Игровое поле"><div class="screen-wrap"><canvas id="game" aria-label="Волк ловит яйца на четырёх дорожках"></canvas><div class="screen-overlay" id="overlay"><div class="overlay-panel"><h2 id="overlay-title">Корзину в руки!</h2><p id="overlay-text">Подключи телефон по QR-коду.</p><button class="primary" id="overlay-action">Попробовать на клавиатуре</button></div></div></div><div class="console-bottom"><span id="game-status">Готовы ловить?</span><div class="console-actions"><button id="pause" class="small-button" disabled>Пауза</button><button id="fullscreen" class="small-button">Во весь экран ⛶</button></div></div></section>
-<div class="connect-card pairing-center" id="pairing-center"><h2 id="connect-title">Подключи телефон</h2><div id="pairing-setup"><p>Сканируй QR-код</p><div class="qr-wrap"><canvas id="qr" aria-label="QR-код подключения телефона"></canvas></div><button class="text-button" id="copy">Скопировать ссылку</button></div><div class="connection-status" id="connection"><span class="dot"></span><span id="connection-text">Подключаемся…</span></div><p class="helper" id="link-help">Включи камеру, отойди и держи корзину перед собой 3 секунды.</p><div class="paired-info" id="paired-info" hidden><div class="ready-illustration" aria-hidden="true">↖ 🧺 ↗</div><strong id="tracking-label">Встань в кадр</strong><p>Держи корзину 3 секунды.<br>Начнём без касания!</p><p id="received-motion" hidden></p></div></div></div><p class="keyboard-hint">Без телефона: Q / A — слева, E / D — справа · Пробел — пауза</p></main>`;
+<div class="connect-card pairing-center" id="pairing-center"><h2 id="connect-title">Подключи телефон</h2><div id="pairing-setup"><p>Сканируй QR-код</p><div class="qr-wrap"><canvas id="qr" aria-label="QR-код подключения телефона"></canvas></div><button class="text-button" id="copy">Скопировать ссылку</button></div><div class="connection-status" id="connection"><span class="dot"></span><span id="connection-text">Подключаемся…</span></div><p class="helper" id="link-help">Включи камеру, отойди и держи корзину перед собой 3 секунды.</p><div class="paired-info" id="paired-info" hidden><div class="ready-illustration" aria-hidden="true">↖ 🧺 ↗</div><strong id="tracking-label">Встань в кадр</strong><p>Держи корзину 3 секунды.<br>Начнём без касания!</p><p id="received-motion" hidden></p></div></div></div><div class="global-stats" aria-label="Общая статистика"><span class="stats-caption" id="stats-caption">Все игроки</span><span>Было сыграно <strong id="stats-games">—</strong></span><span>Яиц поймано <strong id="stats-caught">—</strong></span><span>Яиц разбито <strong id="stats-broken">—</strong></span></div><p class="keyboard-hint">Без телефона: Q / A — слева, E / D — справа · Пробел — пауза</p></main>`;
+    if(!cloudEnabled)setText($('stats-caption'),'На этом устройстве');
+    const stats = new Statistics(totals => {
+        for(const key of ['games','caught','broken'] as const) setText($('stats-'+key),totals[key].toLocaleString('ru-RU'));
+    });
     // Pairing lives over the centre of the game, never beside it.
     document.querySelector('.screen-wrap')!.append($('pairing-center'));
     $('pairing-center').insertAdjacentHTML('beforeend', '<p id="audio-hint" class="audio-hint">Для звука коснись экрана игры.</p><button id="pairing-keyboard" class="text-button">Попробовать на клавиатуре</button>');
@@ -30,7 +35,7 @@ export async function mountHost() {
     setText($('record'), String(best).padStart(3, '0'));
     const active = () => ['playing', 'countdown'].includes(game.state.phase);
     function start(nextMode: 'keyboard' | 'motion') { if (nextMode === 'motion' && (!peer || !online || !tracked))
-        return; sound.unlock(); mode = nextMode; manualPause = false; reason = ''; lastEvent = 0; game.start(); if (mode === 'motion')
+        return; if (!['ready','over'].includes(game.state.phase)) return; stats.start(); sound.unlock(); mode = nextMode; manualPause = false; reason = ''; lastEvent = 0; game.start(); if (mode === 'motion')
         game.move(remoteLane); }
     function togglePause() { sound.unlock(); if (active()) {
         manualPause = true;
@@ -127,6 +132,7 @@ export async function mountHost() {
                 }
                 catch { }
             }
+            stats.setRoom(seat!);
             const origin = config.publicOrigin || location.origin;
             link = controllerUrl(origin,seat!.id,seat!.joinKey);
             const controllerLink = document.createElement('a');
@@ -151,6 +157,7 @@ export async function mountHost() {
     void connect();
     function updateUi() {
         const s = game.state;
+        stats.observe(s.score,s.misses);
         sound.update(s);
         setText($('sound'), sound.enabled ? 'Звук: вкл. ♪' : 'Звук: выкл.');
         $('sound').setAttribute('aria-label', sound.enabled ? 'Выключить звук' : 'Включить звук');
