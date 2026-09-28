@@ -1,5 +1,9 @@
 # GitHub Pages + отдельный Supabase
 
+Игра: https://drquizman.github.io/nu-pogodi/
+
+Публичный репозиторий: https://github.com/drquizman/nu-pogodi. Ветка `main` содержит исходники, `gh-pages` — готовый сайт. GitHub Pages публикует `gh-pages` / `(root)` с HTTPS. При обновлении игры нужно пересобрать облачную версию и загрузить содержимое `dist` в `gh-pages`; один push исходников в `main` сайт не обновляет.
+
 Проект игры: nu-pogodi-motion (dmhdfjdullccoheavcec), регион eu-central-1.
 DrQuizman не используется: у игры свои таблицы np_rooms/np_members, функции RPC, пользователи и политики Realtime.
 
