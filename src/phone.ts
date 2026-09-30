@@ -29,7 +29,7 @@ export function mountPhone() {
     cameraBox.before($('camera-start'), $('hold-status'));
     let seq = 0, ackSeq = 0, ackAt = 0, ackLane = 0, hostInput = 'motion', cameraBusy = false;
     const video = $<HTMLVideoElement>('video'), canvas = $<HTMLCanvasElement>('skeleton'), ctx = canvas.getContext('2d')!;
-    let cameraGeneration = 0;
+    let cameraGeneration = 0, cameraTimeout: number | undefined, roomClosed = false;
     conn = new Connection({ room, role: 'phone', key }, msg => {
         if (msg.type === 'host') {
             host = msg.connected;
@@ -54,9 +54,9 @@ export function mountPhone() {
             }
         }
         if (msg.type === 'fatal') {
+            roomClosed = true;
             setText($('phone-message'), msg.message);
-            stopCamera();
-            $('camera-start').setAttribute('disabled', '');
+            setText($('delivery-status'), 'Эта ссылка устарела. Сканируй новый QR-код с экрана игры.');
         }
     }, value => { online = value; setText($('phone-online'), value ? 'На связи' : 'Нет связи'); });
     async function keepAwake() { try {
@@ -72,6 +72,10 @@ export function mountPhone() {
             setText($('phone-online'), 'На связи');
         const fresh = performance.now() - lastResult < 800;
         setText($('delivery-status'), !online ? 'Нет соединения с сервером' : !host ? 'Экран игры отключён — открой его на компьютере' : hostInput === 'keyboard' ? 'На экране выбран режим «Только клавиатура»' : performance.now() - ackAt < 1800 && ackSeq > 0 ? (tracked && fresh ? `Экран получает движения: ${names[ackLane]?.toLowerCase() || 'корзина'}` : 'Связь с экраном есть. Нужны обе руки и пояс в кадре.') : 'Ждём подтверждения от экрана. Открой вкладку игры на компьютере.');
+        if (roomClosed) {
+            setText($('phone-online'), 'Нужен новый QR');
+            setText($('delivery-status'), 'Эта ссылка устарела. Обнови игру на большом экране и сканируй новый QR-код.');
+        }
         $('phone-play').hidden = !ready || !['ready', 'over'].includes(phase) || calibrationAt > 0 || (training >= 0 && training < 4);
         $('phone-play').toggleAttribute('disabled', !host || !online);
         setText($('phone-play'), tracked && fresh ? 'Начать сейчас' : 'Начать, когда встану в кадр');
@@ -85,7 +89,7 @@ export function mountPhone() {
             setText($('hold-status'), 'Начинаем! Смотри на большой экран.');
         }
     }, 100);
-    function stopCamera() { occlusion.reset(); cameraGeneration++; stopped = true; stream?.getTracks().forEach(t => t.stop()); stream = undefined; worker?.terminate(); worker = undefined; ready = false; busy = false; tracked = false; calibrated = false; calibrationAt = 0; training = -1; finishedCalibration = false; tracker.center = { x: 0, y: .55, confidence: 1 }; void wake?.release(); sendPose(); video.srcObject = null; $('camera-start').hidden = false; $('camera-start').removeAttribute('disabled'); setText($('camera-start'), 'Включить камеру'); $('camera-stop').hidden = true; $('calibrate').hidden = true; $('phone-play').hidden = true; $('wide-view').setAttribute('disabled', ''); $('camera-placeholder').hidden = false; setText($('camera-badge'), 'Камера выключена'); ctx.clearRect(0, 0, canvas.width, canvas.height); }
+    function stopCamera() { clearTimeout(cameraTimeout); cameraBusy = false; occlusion.reset(); cameraGeneration++; stopped = true; stream?.getTracks().forEach(t => t.stop()); stream = undefined; worker?.terminate(); worker = undefined; ready = false; busy = false; tracked = false; calibrated = false; calibrationAt = 0; training = -1; finishedCalibration = false; tracker.center = { x: 0, y: .55, confidence: 1 }; void wake?.release(); sendPose(); video.srcObject = null; $('camera-start').hidden = false; $('camera-start').removeAttribute('disabled'); setText($('camera-start'), 'Включить камеру'); $('camera-stop').hidden = true; $('calibrate').hidden = true; $('phone-play').hidden = true; $('wide-view').setAttribute('disabled', ''); $('camera-placeholder').hidden = false; setText($('camera-badge'), 'Камера выключена'); ctx.clearRect(0, 0, canvas.width, canvas.height); }
     async function configureCamera(track: MediaStreamTrack) {
         setText($('camera-info'), await widestView(track));
         const cameras = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
@@ -100,18 +104,23 @@ export function mountPhone() {
         if (cameraBusy)
             return;
         if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-            setText($('phone-message'), 'Для камеры нужна HTTPS-ссылка. Открой QR-код из игры, запущенной через «Играть.bat».');
+            setText($('phone-message'), 'Открой ссылку из QR-кода в Chrome или Safari по HTTPS. Встроенный браузер сканера может не поддерживать камеру.');
             return;
         }
-        cameraBusy = true;
         if (stream)
             stopCamera();
+        cameraBusy = true;
         $('camera-choice').setAttribute('disabled', '');
         $('camera-start').setAttribute('disabled', '');
         setText($('camera-start'), 'Загружаем камеру…');
         setText($('phone-message'), 'Разреши камеру в запросе браузера.');
         stopped = false;
         const generation = ++cameraGeneration;
+        cameraTimeout = window.setTimeout(() => {
+            if (generation !== cameraGeneration) return;
+            stopCamera();
+            setText($('phone-message'), 'Камера или распознавание не ответили. Разреши камеру в настройках сайта и попробуй снова. Если ссылка открылась внутри сканера — открой её в Chrome или Safari.');
+        }, 30000);
         try {
             const acquired = await navigator.mediaDevices.getUserMedia({ video: cameraConstraints(deviceId), audio: false });
             if (generation !== cameraGeneration) {
@@ -121,6 +130,7 @@ export function mountPhone() {
             stream = acquired;
             video.srcObject = stream;
             await video.play();
+            if (generation !== cameraGeneration) return;
             await configureCamera(acquired.getVideoTracks()[0]);
             if (generation !== cameraGeneration)
                 return;
@@ -136,6 +146,7 @@ export function mountPhone() {
                 if (generation !== cameraGeneration)
                     return;
                 if (e.data.type === 'ready') {
+                    clearTimeout(cameraTimeout);
                     ready = true;
                     $('calibrate').hidden = false;
                     setText($('phone-message'), 'Всё готово. Смотри на большой экран!');
@@ -162,8 +173,8 @@ export function mountPhone() {
             setText($('phone-message'), e instanceof DOMException && e.name === 'NotAllowedError' ? 'Камера не разрешена. Разреши её в настройках сайта и нажми ещё раз.' : 'Не удалось открыть эту камеру. Выбери другую камеру или повтори попытку.');
         }
         finally {
-            cameraBusy = false;
-            if ($<HTMLSelectElement>('camera-choice').options.length > 1)
+            if (generation === cameraGeneration) cameraBusy = false;
+            if (!cameraBusy && $<HTMLSelectElement>('camera-choice').options.length > 1)
                 $('camera-choice').removeAttribute('disabled');
         }
     }

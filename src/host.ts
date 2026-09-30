@@ -27,7 +27,7 @@ export async function mountHost() {
     window.addEventListener('pointerdown', unlockAudio, {capture:true});
     window.addEventListener('keydown', unlockAudio, {capture:true});
     let mode: 'keyboard' | 'motion' = 'keyboard', connection: Connection | undefined, peer = false, online = false, tracked = false, calibrated = false, lastPose = 0, reason = '', manualPause = false, trackingSince = 0, link = '', lastPhase = '', lastEvent = 0, best = 0, lastBroadcast = 0, previous = performance.now(), retryFatal = false;
-    let forceKeyboard = false, poseSeq = 0, remoteLane: Lane = 0;
+    let forceKeyboard = false, poseSeq = 0, remoteLane: Lane = 0, roomRenewals = 0;
     try {
         best = Number(localStorage.getItem('np-record') || 0);
     }
@@ -102,6 +102,9 @@ export async function mountHost() {
                 togglePause();
         }
         if (msg.type === 'fatal') {
+            connection?.close();
+            peer = false;
+            online = false;
             retryFatal = true;
             setText($('connection-text'), msg.message);
             try {
@@ -110,6 +113,11 @@ export async function mountHost() {
             catch { }
             setText($('copy'), 'Создать новую комнату');
             $('copy').onclick = () => location.reload();
+            if (roomRenewals++ === 0) {
+                retryFatal = false;
+                setText($('connection-text'), 'Создаём новую комнату…');
+                void connect();
+            }
         }
     }
     async function connect() {
@@ -135,6 +143,12 @@ export async function mountHost() {
             stats.setRoom(seat!);
             const origin = config.publicOrigin || location.origin;
             link = controllerUrl(origin,seat!.id,seat!.joinKey);
+            document.querySelector('.controller-link')?.remove();
+            setText($('copy'), 'Скопировать ссылку');
+            $('copy').onclick = async () => {
+                try { await navigator.clipboard.writeText(link); setText($('copy'), 'Ссылка скопирована ✓'); }
+                catch { setText($('link-help'), link); }
+            };
             const controllerLink = document.createElement('a');
             controllerLink.href = link;
             setText(controllerLink, 'Открыть пульт');
