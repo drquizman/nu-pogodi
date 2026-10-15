@@ -9,9 +9,3 @@ try{await access('public/models/pose_landmarker_lite.task');}catch{
  await writeFile('public/models/pose_landmarker_lite.task',Buffer.from(await response.arrayBuffer()));
 }
 console.log('Camera model and WASM are ready.');
-
-try{await access('public/models/gesture_recognizer.task');}catch{
- const response=await fetch('https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task');
- if(!response.ok)throw Error('Gesture model download failed: '+response.status);
- await writeFile('public/models/gesture_recognizer.task',Buffer.from(await response.arrayBuffer()));
-}

@@ -88,7 +88,7 @@ export async function mountHost() {
             lastPose = performance.now();
             tracked = msg.tracked;
             calibrated = msg.calibrated===true;
-            setupGuide=typeof msg.guide==='string'?msg.guide.slice(0,240):(calibrated?'Покажи открытую ладонь на 3 секунды.':'Соедини руки перед животом и замри на 2 секунды.');
+            setupGuide=typeof msg.guide==='string'?msg.guide.slice(0,240):(calibrated?'Положение рук настроено. Начинаем!':'Соедини руки перед животом и замри на 2 секунды.');
             setupProgress=Number.isFinite(msg.progress)?Math.max(0,Math.min(1,msg.progress)):0;
             poseSeq = msg.seq || 0;
             remoteLane = msg.lane;
@@ -219,7 +219,7 @@ export async function mountHost() {
         const progress=$<HTMLProgressElement>('setup-progress');
         progress.hidden=mode!=='motion'||!['ready','over'].includes(s.phase);progress.value=setupProgress;
         if (s.phase === 'ready') {
-            setText($('overlay-title'), mode === 'motion' ? (calibrated?'Покажи ладонь ✋':'Настроим положение рук') : 'Корзину в руки!');
+            setText($('overlay-title'), mode === 'motion' ? (calibrated?'Готово!':'Настроим положение рук') : 'Корзину в руки!');
             setText($('overlay-text'), mode === 'motion' ? (!fresh?'Включи камеру на телефоне и смотри сюда.':setupGuide) : 'Подключи телефон или попробуй игру на клавиатуре.');
             $('overlay-action').hidden = mode === 'motion';
             setText($('overlay-action'), 'Попробовать на клавиатуре');
@@ -229,7 +229,7 @@ export async function mountHost() {
             $('overlay-action').removeAttribute('disabled');
         if (s.phase === 'countdown') {
             setText($('overlay-title'), String(Math.max(1, Math.ceil(s.countdown))));
-            setText($('overlay-text'), 'Опусти ладонь. Соедини руки и перемещай их влево, вправо, вверх и вниз.');
+            setText($('overlay-text'), 'Перемещай соединённые руки влево, вправо, вверх и вниз.');
             $('overlay-action').hidden = true;
         }
         else if (s.phase === 'paused') {

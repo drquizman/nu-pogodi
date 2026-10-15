@@ -3,7 +3,6 @@ import { Connection } from './connection';
 import { BasketTracker, OcclusionTracker, type Body, type Point } from './core/pose';
 import type { Lane } from './core/game';
 import { cameraConstraints, widestView } from './camera';
-import { PalmStart } from './core/palm-start';
 import { NeutralCalibration } from './core/neutral-calibration';
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const names = ['Слева вверху', 'Слева внизу', 'Справа вверху', 'Справа внизу'];
@@ -22,15 +21,14 @@ export function mountPhone() {
     $('camera-start').insertAdjacentHTML('beforebegin', '<p id="delivery-status" class="delivery-status" role="status">Проверка связи с игрой…</p><details class="camera-settings"><summary>Камера и угол обзора</summary><label>Камера<select id="camera-choice" disabled><option value="">Фронтальная камера</option></select></label><button id="wide-view" class="small-button" disabled>Максимальный обзор</button><p id="camera-info">После разрешения камеры здесь появятся доступные объективы. Широкоугольная камера доступна не на всех телефонах и не во всех браузерах.</p><p>Попробуй поставить телефон горизонтально: по сторонам будет больше места для рук.</p></details>');
     const tracker = new BasketTracker();
     let conn: Connection, online = false, host = false, stream: MediaStream | undefined, worker: Worker | undefined, ready = false, busy = false, tracked = false, calibrated = false, latest: Body | null = null, lane: Lane = 0, lastResult = 0, phase = 'ready', lastFrame = 0, stopped = false, wake: WakeLockSentinel | undefined;
-    const holdStart = new PalmStart();
     const neutral = new NeutralCalibration();
-    let palmOpen=false, palmAt=0, palmProgress=0, setupProgress=0, setupText="Включи камеру на телефоне. Затем смотри на большой экран.";
+    let lastStartAt=-Infinity, setupProgress=0, setupText="Включи камеру на телефоне. Затем смотри на большой экран.";
     const occlusion = new OcclusionTracker();
-    $('camera-start').insertAdjacentHTML('beforebegin', '<label class="hands-free"><input id="auto-start" type="checkbox" checked> Старт: покажи открытую ладонь 3 секунды</label><p id="hold-status" class="delivery-status" role="status">Включи камеру и следуй подсказкам на большом экране.</p>');
+    $('camera-start').insertAdjacentHTML('beforebegin', '<label class="hands-free"><input id="auto-start" type="checkbox" checked> Старт сразу после настройки рук</label><p id="hold-status" class="delivery-status" role="status">Включи камеру и следуй подсказкам на большом экране.</p>');
     const settings = document.querySelector('.camera-settings')!;
     setText(settings.querySelector('summary')!, 'Настроить камеру');
     settings.append($('calibrate'), $('camera-stop'));
-    setText($('phone-instruction'), 'Включи камеру и смотри на большой экран: там настройка положения рук и старт ладонью.');
+    setText($('phone-instruction'), 'Включи камеру и смотри на большой экран: там настройка положения рук и автоматический старт.');
     setText($('camera-start'), 'Включить камеру и играть');
     const cameraBox = document.querySelector('.camera-box')!;
     cameraBox.before($('camera-start'), $('hold-status'));
@@ -42,6 +40,7 @@ export function mountPhone() {
             host = msg.connected;
         }
         if (msg.type === 'state') {
+            if(msg.phase==='over' && phase!=='over'){calibrated=false;neutral.reset();setupProgress=0;lastStartAt=-Infinity;}
             phase = msg.phase;
             hostInput = msg.input || 'motion';
             if (msg.poseSeq > ackSeq) {
@@ -70,7 +69,7 @@ export function mountPhone() {
         wake = await navigator.wakeLock?.request('screen');
     }
     catch { } }
-    function sendPose() { const fresh = performance.now() - lastResult < 800; conn.send({ type: 'pose', seq: ++seq, lane, tracked: tracked && fresh && !document.hidden && !!stream, calibrated, guide:setupText, progress:calibrated?palmProgress:setupProgress }); }
+    function sendPose() { const fresh = performance.now() - lastResult < 800; conn.send({ type: 'pose', seq: ++seq, lane, tracked: tracked && fresh && !document.hidden && !!stream, calibrated, guide:setupText, progress:setupProgress }); }
     const heartbeat = window.setInterval(() => {
         sendPose();
         if (!host && online)
@@ -86,19 +85,15 @@ export function mountPhone() {
         $('phone-play').hidden = !ready || !['ready', 'over'].includes(phase);
         $('phone-play').toggleAttribute('disabled', !host || !online);
         setText($('phone-play'), tracked && fresh ? 'Начать сейчас' : 'Начать, когда встану в кадр');
-        const canHold = calibrated && ready && !!stream && online && host && !roomClosed && hostInput === 'motion' && performance.now()-ackAt<1800 && !document.hidden;
-        const hold = holdStart.update(palmOpen && performance.now()-palmAt<600,phase,canHold,performance.now());
-        palmProgress=hold.progress;
-        if(calibrated) setupText=hold.release ? 'Опусти ладонь, затем покажи её снова для новой игры.' : hold.progress>0 ? 'Ладонь видна! Держи её раскрытой ещё '+Math.max(1,Math.ceil(3*(1-hold.progress)))+' сек.' : 'Покажи одну раскрытую ладонь в камеру на 3 секунды. Затем верни обе руки перед собой.';
+        const canStart = calibrated && tracked && fresh && ready && !!stream && online && host && !roomClosed && hostInput === 'motion' && performance.now()-ackAt<1800 && !document.hidden;
+        if(calibrated)setupText='Положение рук настроено. Начинаем!';
         $('hold-status').hidden = !['ready','over'].includes(phase);
         setText($('hold-status'),setupText);
-        if (hold.start) {
-            sendPose();
-            conn.send({ type: 'action', action: 'start' });
-            setText($('hold-status'), 'Начинаем! Смотри на большой экран.');
+        if(canStart && ['ready','over'].includes(phase) && performance.now()-lastStartAt>1000){
+            lastStartAt=performance.now();sendPose();conn.send({type:'action',action:'start'});
         }
     }, 100);
-    function stopCamera() { neutral.reset(); palmOpen=false; palmAt=0; palmProgress=0; setupProgress=0; setupText='Включи камеру на телефоне. Затем смотри на большой экран.'; clearTimeout(cameraTimeout); cameraBusy = false; occlusion.reset(); cameraGeneration++; stopped = true; stream?.getTracks().forEach(t => t.stop()); stream = undefined; worker?.terminate(); worker = undefined; ready = false; busy = false; tracked = false; calibrated = false; tracker.center = { x: 0, y: .55, confidence: 1 }; void wake?.release(); sendPose(); video.srcObject = null; $('camera-start').hidden = false; $('camera-start').removeAttribute('disabled'); setText($('camera-start'), 'Включить камеру'); $('camera-stop').hidden = true; $('calibrate').hidden = true; $('phone-play').hidden = true; $('wide-view').setAttribute('disabled', ''); $('camera-placeholder').hidden = false; setText($('camera-badge'), 'Камера выключена'); ctx.clearRect(0, 0, canvas.width, canvas.height); }
+    function stopCamera() { neutral.reset(); lastStartAt=-Infinity; setupProgress=0; setupText='Включи камеру на телефоне. Затем смотри на большой экран.'; clearTimeout(cameraTimeout); cameraBusy = false; occlusion.reset(); cameraGeneration++; stopped = true; stream?.getTracks().forEach(t => t.stop()); stream = undefined; worker?.terminate(); worker = undefined; ready = false; busy = false; tracked = false; calibrated = false; tracker.center = { x: 0, y: .55, confidence: 1 }; void wake?.release(); sendPose(); video.srcObject = null; $('camera-start').hidden = false; $('camera-start').removeAttribute('disabled'); setText($('camera-start'), 'Включить камеру'); $('camera-stop').hidden = true; $('calibrate').hidden = true; $('phone-play').hidden = true; $('wide-view').setAttribute('disabled', ''); $('camera-placeholder').hidden = false; setText($('camera-badge'), 'Камера выключена'); ctx.clearRect(0, 0, canvas.width, canvas.height); }
     async function configureCamera(track: MediaStreamTrack) {
         setText($('camera-info'), await widestView(track));
         const cameras = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
@@ -162,7 +157,6 @@ export function mountPhone() {
                 }
                 if (e.data.type === 'pose') {
                     busy = false;
-                    if(typeof e.data.palm==='boolean'){palmOpen=e.data.palm;palmAt=performance.now();}
                     processPose(e.data.points);
                 }
                 if (e.data.type === 'error') {
@@ -207,7 +201,7 @@ export function mountPhone() {
                     frame.close();
                     return;
                 }
-                worker.postMessage({ type: 'frame', frame, at: now, gestures: calibrated && ['ready','over'].includes(phase) }, [frame]);
+                worker.postMessage({ type: 'frame', frame, at: now }, [frame]);
             }
             catch {
                 busy = false;
