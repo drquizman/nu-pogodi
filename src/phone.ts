@@ -40,7 +40,7 @@ export function mountPhone() {
             host = msg.connected;
         }
         if (msg.type === 'state') {
-            if(msg.phase==='over' && phase!=='over'){calibrated=false;neutral.reset();setupProgress=0;lastStartAt=-Infinity;}
+            if(msg.phase==='over' && phase!=='over'){calibrated=false;occlusion.reset();neutral.reset();setupProgress=0;lastStartAt=-Infinity;}
             phase = msg.phase;
             hostInput = msg.input || 'motion';
             if (msg.poseSeq > ackSeq) {
@@ -256,7 +256,7 @@ export function mountPhone() {
         if(!calibrated && ['ready','over','paused'].includes(phase)) {
             const result=neutral.update(latest,lastResult);setupProgress=result.progress;
             setupText=!latest || latest.quality!=='both' ? 'Отойди так, чтобы камера видела пояс и обе руки. Соедини руки перед животом.' : 'Соедини руки перед животом, между грудью и поясом. Замри на 2 секунды: '+Math.round(result.progress*100)+'%';
-            if(result.samples && tracker.calibrate(result.samples)){calibrated=true;setupProgress=1;neutral.reset();}
+            if(result.samples && tracker.calibrate(result.samples)){calibrated=true;setupProgress=1;occlusion.anchorAt(points);neutral.reset();}
         }
         if(!latest)return;
         lane=tracker.update(latest);

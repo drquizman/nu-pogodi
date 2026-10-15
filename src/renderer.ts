@@ -59,6 +59,6 @@ export class Renderer {
   this.poly([[411,16],[549,18],[551,94],[409,92]],'#fff4dceF',true);
   this.text(String(s.score),480,61,38);this.text('ПОЙМАНО',480,82,10,'#795b3c');
   for(let i=0;i<3;i++){const x=449+i*31;if(i<s.misses){this.line([[x-6,104],[x+6,120]],'#a74537',2.5);this.line([[x+6,104],[x-6,120]],'#a74537',2.5);}else this.egg(x,112);}
-  this.text(`ТЕМП ${s.level}`,871,531,14,'#443b27');c.restore();
+  this.text(`ТЕМП ×${s.level.toFixed(2)}`,871,531,14,'#443b27');c.restore();
  }
 }

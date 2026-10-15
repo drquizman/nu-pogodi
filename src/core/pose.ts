@@ -17,17 +17,21 @@ export function bodyPosition(points: Point[]): Body | null {
 }
 /** Short occlusions are bridged only after observing both wrists on a visible torso. */
 export class OcclusionTracker {
+  private anchor: ReturnType<typeof torsoFrame> = null;
+  anchorAt(points:Point[]){this.anchor=torsoFrame(points);}
   private lastBoth=-Infinity;
   private lastReliable=-Infinity;
   private lastBody:Body|null=null;
   private offsets=new Map<number,{x:number;y:number}>();
-  reset(){this.lastBoth=-Infinity;this.lastReliable=-Infinity;this.lastBody=null;this.offsets.clear();}
+  reset(){this.anchor=null;this.lastBoth=-Infinity;this.lastReliable=-Infinity;this.lastBody=null;this.offsets.clear();}
   update(points:Point[],now:number):Body|null {
-    const frame=torsoFrame(points);
+    const current=torsoFrame(points);
     // Never keep playing using a remembered person who has left the frame.
-    if(!frame){this.reset();return null;}
+    if(!current){this.lastBoth=-Infinity;this.lastReliable=-Infinity;this.lastBody=null;this.offsets.clear();return null;}
+    const frame=this.anchor||current;
     const normalize=(p:Point)=>({x:-(p.x-frame.x)/frame.scale,y:(p.y-frame.y)/frame.scale});
     const full=bodyPosition(points);
+    if(full){const a=normalize(points[15]),b=normalize(points[16]);full.x=(a.x+b.x)/2;full.y=(a.y+b.y)/2;}
     if(full){this.lastBoth=now;this.lastReliable=now;this.lastBody=full;for(const i of [15,16]){const p=normalize(points[i]);this.offsets.set(i,{x:full.x-p.x,y:full.y-p.y});}return full;}
     const wrist=[15,16].find(i=>visible(points[i]));
     if(wrist!==undefined&&now-this.lastBoth<=2000){
@@ -44,11 +48,11 @@ export class BasketTracker {
   lane: Lane = 0;
   center: Body = { x: 0, y: .55, confidence: 1 };
   update(body: Body): Lane {
-    this.smooth = this.smooth ? { x: this.smooth.x*.6+body.x*.4, y: this.smooth.y*.6+body.y*.4, confidence: body.confidence } : { ...body };
+    this.smooth = this.smooth ? { x: this.smooth.x*.35+body.x*.65, y: this.smooth.y*.35+body.y*.65, confidence: body.confidence } : { ...body };
     const x = this.smooth.x-this.center.x, y = this.smooth.y-this.center.y;
     let right = this.lane >= 2, bottom = this.lane % 2 === 1;
-    if (x > .14) right = true; else if (x < -.14) right = false;
-    if (y > .1) bottom = true; else if (y < -.1) bottom = false;
+    if (x > .1) right = true; else if (x < -.1) right = false;
+    if (y > .07) bottom = true; else if (y < -.07) bottom = false;
     this.lane = ((right ? 2 : 0) + (bottom ? 1 : 0)) as Lane;
     return this.lane;
   }

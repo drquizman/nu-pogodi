@@ -212,7 +212,7 @@ export async function mountHost() {
             trackingSince = 0;
         $('pause').toggleAttribute('disabled', ['ready', 'over'].includes(s.phase));
         setText($('pause'), s.phase === 'paused' ? 'Продолжить' : 'Пауза');
-        setText($('game-status'), s.phase === 'playing' ? `${mode === 'motion' ? 'КАМЕРА' : 'КЛАВИАТУРА'} · ТЕМП ${s.level}` : s.phase === 'paused' ? 'ПАУЗА' : s.phase === 'over' ? 'ИГРА ОКОНЧЕНА' : s.phase === 'countdown' ? 'ПРИГОТОВЬСЯ' : 'ГОТОВА К ИГРЕ');
+        setText($('game-status'), s.phase === 'playing' ? `${mode === 'motion' ? 'КАМЕРА' : 'КЛАВИАТУРА'} · ${laneNames[s.basket]} · ТЕМП ×${s.level.toFixed(2)}` : s.phase === 'paused' ? 'ПАУЗА' : s.phase === 'over' ? 'ИГРА ОКОНЧЕНА' : s.phase === 'countdown' ? 'ПРИГОТОВЬСЯ' : 'ГОТОВА К ИГРЕ');
         $('overlay').hidden = s.phase === 'playing' || !$('pairing-center').hidden;
         $('overlay').classList.toggle('motion-preview', s.phase === 'ready' && mode==='keyboard');
         $('overlay').classList.toggle('motion-setup', mode==='motion' && ['ready','over'].includes(s.phase));
