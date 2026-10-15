@@ -53,7 +53,7 @@ export class BasketTracker {
     return this.lane;
   }
   calibrate(samples: Body[]) {
-    if (samples.length < 20) return false;
+    if (samples.length < 12) return false;
     const average = (key: 'x'|'y') => samples.reduce((sum,p)=>sum+p[key],0)/samples.length;
     const x = average('x'), y = average('y');
     if (samples.some(p => Math.abs(p.x-x) > .3 || Math.abs(p.y-y) > .25)) return false;

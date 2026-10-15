@@ -44,3 +44,5 @@
 @media(min-width:651px){.desktop.simple-game{max-width:min(1500px,calc((100dvh - 170px)*12/7 + 80px))}}
 
 .global-stats{display:flex;align-items:center;justify-content:center;gap:10px 24px;flex-wrap:wrap;margin:18px 0 0;color:#796950;font-size:12px}.global-stats strong{color:#a64345;font-size:17px;margin-left:5px;font-variant-numeric:tabular-nums}.stats-caption{font-size:10px;text-transform:uppercase;letter-spacing:.08em}.simple-game .keyboard-hint{margin-top:10px}@media(min-width:651px){.desktop.simple-game{max-width:min(1500px,calc((100dvh - 200px)*12/7 + 80px))}}@media(max-width:650px){.global-stats{gap:8px 14px;font-size:10px}.global-stats strong{font-size:14px}.stats-caption{width:100%;text-align:center}}
+
+.motion-setup .overlay-panel{max-width:min(620px,90%);padding:24px 32px}.motion-setup .overlay-panel h2{font-size:clamp(22px,3vw,36px)}.motion-setup .overlay-panel p{max-width:520px;font-size:clamp(16px,2vw,23px);line-height:1.5}#setup-progress{display:block;width:100%;height:18px;margin:16px auto 0;accent-color:#bd5960}

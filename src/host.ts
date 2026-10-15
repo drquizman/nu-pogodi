@@ -6,13 +6,14 @@ import { Game, type Lane } from './core/game';
 import { Renderer } from './renderer';
 import { Connection } from './connection';
 import { Sound } from './audio';
+import { TrackingGrace } from './core/tracking-grace';
 const laneNames = ['Слева вверху', 'Слева внизу', 'Справа вверху', 'Справа внизу'];
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 export async function mountHost() {
     document.getElementById('app')!.innerHTML = `
 <main class="desktop simple-game"><header><a class="brand" href="./">Ну, погоди!<span class="brand-sub">ЛОВИ ЯЙЦА РУКАМИ</span></a><div class="header-right"><span class="record">Рекорд <strong id="record">0</strong></span><button class="icon-button" id="sound">Звук: вкл. ♪</button></div></header>
 <div class="play-layout"><section class="console" aria-label="Игровое поле"><div class="screen-wrap"><canvas id="game" aria-label="Волк ловит яйца на четырёх дорожках"></canvas><div class="screen-overlay" id="overlay"><div class="overlay-panel"><h2 id="overlay-title">Корзину в руки!</h2><p id="overlay-text">Подключи телефон по QR-коду.</p><button class="primary" id="overlay-action">Попробовать на клавиатуре</button></div></div></div><div class="console-bottom"><span id="game-status">Готовы ловить?</span><div class="console-actions"><button id="pause" class="small-button" disabled>Пауза</button><button id="fullscreen" class="small-button">Во весь экран ⛶</button></div></div></section>
-<div class="connect-card pairing-center" id="pairing-center"><h2 id="connect-title">Подключи телефон</h2><div id="pairing-setup"><p>Сканируй QR-код</p><div class="qr-wrap"><canvas id="qr" aria-label="QR-код подключения телефона"></canvas></div><button class="text-button" id="copy">Скопировать ссылку</button></div><div class="connection-status" id="connection"><span class="dot"></span><span id="connection-text">Подключаемся…</span></div><p class="helper" id="link-help">Включи камеру, отойди и держи корзину перед собой 3 секунды.</p><div class="paired-info" id="paired-info" hidden><div class="ready-illustration" aria-hidden="true">↖ 🧺 ↗</div><strong id="tracking-label">Встань в кадр</strong><p>Держи корзину 3 секунды.<br>Начнём без касания!</p><p id="received-motion" hidden></p></div></div></div><div class="global-stats" aria-label="Общая статистика"><span class="stats-caption" id="stats-caption">Все игроки</span><span>Было сыграно <strong id="stats-games">—</strong></span><span>Яиц поймано <strong id="stats-caught">—</strong></span><span>Яиц разбито <strong id="stats-broken">—</strong></span></div><p class="keyboard-hint">Без телефона: Q / A — слева, E / D — справа · Пробел — пауза</p></main>`;
+<div class="connect-card pairing-center" id="pairing-center"><h2 id="connect-title">Подключи телефон</h2><div id="pairing-setup"><p>Сканируй QR-код</p><div class="qr-wrap"><canvas id="qr" aria-label="QR-код подключения телефона"></canvas></div><button class="text-button" id="copy">Скопировать ссылку</button></div><div class="connection-status" id="connection"><span class="dot"></span><span id="connection-text">Подключаемся…</span></div><p class="helper" id="link-help">Включи камеру на телефоне. Настройка и старт — на большом экране.</p><div class="paired-info" id="paired-info" hidden><div class="ready-illustration" aria-hidden="true">↖ 🧺 ↗</div><strong id="tracking-label">Встань в кадр</strong><p>Держи корзину 3 секунды.<br>Начнём без касания!</p><p id="received-motion" hidden></p></div></div></div><div class="global-stats" aria-label="Общая статистика"><span class="stats-caption" id="stats-caption">Все игроки</span><span>Было сыграно <strong id="stats-games">—</strong></span><span>Яиц поймано <strong id="stats-caught">—</strong></span><span>Яиц разбито <strong id="stats-broken">—</strong></span></div><p class="keyboard-hint">Без телефона: Q / A — слева, E / D — справа · Пробел — пауза</p></main>`;
     if(!cloudEnabled)setText($('stats-caption'),'На этом устройстве');
     const stats = new Statistics(totals => {
         for(const key of ['games','caught','broken'] as const) setText($('stats-'+key),totals[key].toLocaleString('ru-RU'));
@@ -27,6 +28,9 @@ export async function mountHost() {
     window.addEventListener('pointerdown', unlockAudio, {capture:true});
     window.addEventListener('keydown', unlockAudio, {capture:true});
     let mode: 'keyboard' | 'motion' = 'keyboard', connection: Connection | undefined, peer = false, online = false, tracked = false, calibrated = false, lastPose = 0, reason = '', manualPause = false, trackingSince = 0, link = '', lastPhase = '', lastEvent = 0, best = 0, lastBroadcast = 0, previous = performance.now(), retryFatal = false;
+    const trackingGrace=new TrackingGrace();
+    let setupGuide='Включи камеру на телефоне и смотри на большой экран.',setupProgress=0;
+    $('overlay-text').insertAdjacentHTML('afterend','<progress id="setup-progress" max="1" value="0" hidden></progress>');
     let forceKeyboard = false, poseSeq = 0, remoteLane: Lane = 0, roomRenewals = 0;
     try {
         best = Number(localStorage.getItem('np-record') || 0);
@@ -34,8 +38,8 @@ export async function mountHost() {
     catch { }
     setText($('record'), String(best).padStart(3, '0'));
     const active = () => ['playing', 'countdown'].includes(game.state.phase);
-    function start(nextMode: 'keyboard' | 'motion') { if (nextMode === 'motion' && (!peer || !online || !tracked))
-        return; if (!['ready','over'].includes(game.state.phase)) return; stats.start(); sound.unlock(); mode = nextMode; manualPause = false; reason = ''; lastEvent = 0; game.start(); if (mode === 'motion')
+    function start(nextMode: 'keyboard' | 'motion') { if (nextMode === 'motion' && (!peer || !online || !calibrated))
+        return; if (!['ready','over'].includes(game.state.phase)) return; trackingGrace.reset(); stats.start(); sound.unlock(); mode = nextMode; manualPause = false; reason = ''; lastEvent = 0; game.start(); if (mode === 'motion')
         game.move(remoteLane); }
     function togglePause() { sound.unlock(); if (active()) {
         manualPause = true;
@@ -83,7 +87,9 @@ export async function mountHost() {
         if (msg.type === 'pose') {
             lastPose = performance.now();
             tracked = msg.tracked;
-            calibrated = msg.calibrated;
+            calibrated = msg.calibrated===true;
+            setupGuide=typeof msg.guide==='string'?msg.guide.slice(0,240):(calibrated?'Покажи открытую ладонь на 3 секунды.':'Соедини руки перед животом и замри на 2 секунды.');
+            setupProgress=Number.isFinite(msg.progress)?Math.max(0,Math.min(1,msg.progress)):0;
             poseSeq = msg.seq || 0;
             remoteLane = msg.lane;
             if (!forceKeyboard)
@@ -186,8 +192,10 @@ export async function mountHost() {
         if (!retryFatal)
             setText($('connection-text'), !online ? 'Восстанавливаем соединение…' : peer ? 'Телефон подключён' : 'Ждём подключения телефона');
         $('connection').classList.toggle('connected', peer && online);
-        if (mode === 'motion' && active() && (!peer || !online || !tracked)) {
-            reason = !online || !peer ? 'Соединение с телефоном потеряно.' : 'Нужны обе руки и корпус в кадре.';
+        const motionGood=peer && online && tracked;
+        if(mode!=='motion'||s.phase!=='playing')trackingGrace.reset();
+        if (mode === 'motion' && s.phase==='playing' && trackingGrace.shouldPause(motionGood,performance.now())) {
+            reason = !online || !peer ? 'Связь с телефоном потеряна. Вернёмся в игру после подключения.' : 'Камера долго не видит руки. Верни руки в кадр — продолжим автоматически.';
             manualPause = false;
             trackingSince = 0;
             game.pause();
@@ -197,7 +205,7 @@ export async function mountHost() {
                 trackingSince = performance.now();
             if (performance.now() - trackingSince > 700) {
                 reason = '';
-                game.resume();
+                game.resume(1);
             }
         }
         else
@@ -206,10 +214,13 @@ export async function mountHost() {
         setText($('pause'), s.phase === 'paused' ? 'Продолжить' : 'Пауза');
         setText($('game-status'), s.phase === 'playing' ? `${mode === 'motion' ? 'КАМЕРА' : 'КЛАВИАТУРА'} · ТЕМП ${s.level}` : s.phase === 'paused' ? 'ПАУЗА' : s.phase === 'over' ? 'ИГРА ОКОНЧЕНА' : s.phase === 'countdown' ? 'ПРИГОТОВЬСЯ' : 'ГОТОВА К ИГРЕ');
         $('overlay').hidden = s.phase === 'playing' || !$('pairing-center').hidden;
-        $('overlay').classList.toggle('motion-preview', s.phase === 'ready');
+        $('overlay').classList.toggle('motion-preview', s.phase === 'ready' && mode==='keyboard');
+        $('overlay').classList.toggle('motion-setup', mode==='motion' && ['ready','over'].includes(s.phase));
+        const progress=$<HTMLProgressElement>('setup-progress');
+        progress.hidden=mode!=='motion'||!['ready','over'].includes(s.phase);progress.value=setupProgress;
         if (s.phase === 'ready') {
-            setText($('overlay-title'), mode === 'motion' ? 'Держи корзину 3 секунды' : 'Корзину в руки!');
-            setText($('overlay-text'), mode === 'motion' ? (tracked ? 'Замри с корзиной перед собой — игра начнётся сама.' : 'Включи камеру на телефоне и встань по пояс в кадр.') : 'Подключи телефон или попробуй игру на клавиатуре.');
+            setText($('overlay-title'), mode === 'motion' ? (calibrated?'Покажи ладонь ✋':'Настроим положение рук') : 'Корзину в руки!');
+            setText($('overlay-text'), mode === 'motion' ? (!fresh?'Включи камеру на телефоне и смотри сюда.':setupGuide) : 'Подключи телефон или попробуй игру на клавиатуре.');
             $('overlay-action').hidden = mode === 'motion';
             setText($('overlay-action'), 'Попробовать на клавиатуре');
             $('overlay-action').toggleAttribute('disabled', mode === 'motion' && (!tracked || !peer || !online));
@@ -218,7 +229,7 @@ export async function mountHost() {
             $('overlay-action').removeAttribute('disabled');
         if (s.phase === 'countdown') {
             setText($('overlay-title'), String(Math.max(1, Math.ceil(s.countdown))));
-            setText($('overlay-text'), 'Приготовь корзину');
+            setText($('overlay-text'), 'Опусти ладонь. Соедини руки и перемещай их влево, вправо, вверх и вниз.');
             $('overlay-action').hidden = true;
         }
         else if (s.phase === 'paused') {
@@ -229,8 +240,8 @@ export async function mountHost() {
         }
         else if (s.phase === 'over') {
             setText($('overlay-title'), `Поймано: ${s.score}`);
-            setText($('overlay-text'), s.score >= best && s.score > 0 ? 'Рекорд! Опусти руки и снова держи корзину 3 секунды.' : 'Опусти руки, затем держи корзину перед собой 3 секунды.');
-            $('overlay-action').hidden = false;
+            setText($('overlay-text'), mode==='motion'?setupGuide:'Нажми Enter или «Ещё раз».');
+            $('overlay-action').hidden = mode==='motion';
             setText($('overlay-action'), 'Ещё раз ↵');
         }
         if (s.score > best) {

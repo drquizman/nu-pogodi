@@ -53,7 +53,7 @@ wss.on('connection',ws=>{
     room.touched=now;
     if(msg.type==='ping'){send(ws,{type:'pong',at:msg.at});return;}
     if(role==='phone' && msg.type==='pose' && Number.isInteger(msg.lane) && msg.lane>=0 && msg.lane<=3 && typeof msg.tracked==='boolean') {
-      send(room.host,{type:'pose',lane:msg.lane,tracked:msg.tracked,calibrated:msg.calibrated===true,seq:Number.isSafeInteger(msg.seq)?msg.seq:0,at:now});
+      send(room.host,{type:'pose',lane:msg.lane,tracked:msg.tracked,calibrated:msg.calibrated===true,guide:String(msg.guide||'').slice(0,240),progress:Number.isFinite(msg.progress)?Math.max(0,Math.min(1,msg.progress)):0,seq:Number.isSafeInteger(msg.seq)?msg.seq:0,at:now});
     } else if(role==='phone' && msg.type==='action' && ['start','pause','resume'].includes(msg.action)) send(room.host,{type:'action',action:msg.action});
     else if(role==='host' && msg.type==='state') send(room.phone,{type:'state',phase:msg.phase,score:msg.score,misses:msg.misses,reason:String(msg.reason||'').slice(0,140),input:msg.input==='motion'?'motion':'keyboard',lane:msg.lane,poseSeq:Number.isSafeInteger(msg.poseSeq)?msg.poseSeq:0});
   });

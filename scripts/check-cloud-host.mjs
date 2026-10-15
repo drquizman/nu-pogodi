@@ -15,9 +15,11 @@ try{
  const sub=ch=>new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(Error('subscribe timeout')),15000);ch.subscribe((v,e)=>{if(v==='SUBSCRIBED'){clearTimeout(t);resolve();}else if(v==='CHANNEL_ERROR'){clearTimeout(t);reject(e);}});});
  await Promise.all([sub(own),sub(other)]);
  const send=payload=>own.send({type:'broadcast',event:'message',payload});
- timer=setInterval(()=>void send({type:'pose',seq:++seq,lane,tracked,calibrated:false}),100);
+ timer=setInterval(()=>void send({type:'pose',seq:++seq,lane,tracked,calibrated:true}),100);
  for(lane=0;lane<4;lane++){const s=await wait(s=>s.input==='motion'&&s.lane===lane&&s.poseSeq>0);assert.equal(s.phase,'ready');}
- lane=3;await send({type:'action',action:'start'});await wait(s=>s.phase==='countdown'||s.phase==='playing');
+ lane=3;await send({type:'action',action:'start'});await wait(s=>s.phase==='playing');
+ tracked=false;await new Promise(r=>setTimeout(r,1000));assert.equal(state.phase,'playing','brief loss must not pause');
+ tracked=true;await new Promise(r=>setTimeout(r,300));
  tracked=false;await wait(s=>s.phase==='paused');tracked=true;await wait(s=>s.phase==='countdown');
- console.log('PASS cloud host: 4 lanes, ack, remote start, pause on tracking loss, recovery.');
+ console.log('PASS cloud host: 4 lanes, ack, remote start, brief loss tolerated, sustained loss pauses, recovery.');
 }finally{clearInterval(timer);await c.removeAllChannels();}

@@ -11,7 +11,7 @@ export class Game {
   private initial(): GameState { return { phase: 'ready', score: 0, misses: 0, basket: 0, eggs: [], time: 0, countdown: 3, level: 1, event: '', eventId: 0 }; }
   start() { this.state = this.initial(); this.state.phase = 'countdown'; this.spawnIn = .8; this.id = 0; }
   pause() { if (this.state.phase === 'playing' || this.state.phase === 'countdown') this.state.phase = 'paused'; }
-  resume() { if (this.state.phase === 'paused') { this.state.phase = 'countdown'; this.state.countdown = 3; } }
+  resume(seconds=3) { if (this.state.phase === 'paused') { this.state.phase = 'countdown'; this.state.countdown = seconds; } }
   move(lane: Lane) { this.state.basket = lane; }
   step(dt: number) {
     const s = this.state; dt = Math.max(0, Math.min(dt, .1));
