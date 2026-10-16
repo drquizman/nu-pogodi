@@ -46,7 +46,7 @@ export class OcclusionTracker {
 export class BasketTracker {
   private smooth: Body | null = null;
   lane: Lane = 0;
-  center: Body = { x: 0, y: .55, confidence: 1 };
+  center: Body = { x: 0, y: .5, confidence: 1 };
   update(body: Body): Lane {
     this.smooth = this.smooth ? { x: this.smooth.x*.35+body.x*.65, y: this.smooth.y*.35+body.y*.65, confidence: body.confidence } : { ...body };
     const x = this.smooth.x-this.center.x, y = this.smooth.y-this.center.y;
@@ -61,6 +61,7 @@ export class BasketTracker {
     const average = (key: 'x'|'y') => samples.reduce((sum,p)=>sum+p[key],0)/samples.length;
     const x = average('x'), y = average('y');
     if (samples.some(p => Math.abs(p.x-x) > .3 || Math.abs(p.y-y) > .25)) return false;
-    this.center = { x,y,confidence:1 }; this.smooth = null; return true;
+    // Wrist height during setup must not move the shoulder-to-waist midpoint.
+    this.center = { x,y:.5,confidence:1 }; this.smooth = null; return true;
   }
 }

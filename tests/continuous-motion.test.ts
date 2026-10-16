@@ -16,6 +16,16 @@ test('calibrated camera frame keeps whole-body hand movement instead of cancelli
   assert.equal(b.update(o.update(moved,400)!),lane,'temporary loss must preserve calibration frame');
  }
 });
+test('vertical switching stays at torso midpoint even when calibrated with low hands',()=>{
+ for(const height of [.3,.7,1]){
+  const b=new BasketTracker();
+  assert.ok(b.calibrate(Array.from({length:20},()=>({x:0,y:height,confidence:1}))));
+  for(const [y,bottom] of [[0,0],[.6,1],[.4,0],[.8,1]] as const){
+   for(let i=0;i<8;i++)b.update({x:0,y,confidence:1});
+   assert.equal(b.lane%2,bottom,`setup=${height}, hands=${y}`);
+  }
+ }
+});
 test('speed rises smoothly with playing time and is independent of score',()=>{
  const g=new Game(()=>0);g.state.phase='playing';g.step(.1);const first=g.state.level;
  g.state.score=100;g.step(.1);assert.ok(g.state.level>first&&g.state.level-first<.001);

@@ -24,11 +24,11 @@ test('missing palm, stale frames and disconnected host reset the three seconds',
   assert.equal(h.update(true,'ready',true,3200).start,false);
  }
 });
-test('calibration adapts actual neutral position after two stable seconds',()=>{
+test('calibration accepts stable hands but keeps height threshold at torso midpoint',()=>{
  const c=new NeutralCalibration(),tracker=new BasketTracker();
  for(let t=0;t<2000;t+=100)assert.equal(c.update(body,t).samples,null);
  const samples=c.update(body,2000).samples!;assert.ok(samples);assert.equal(tracker.calibrate(samples),true);
- assert.ok(Math.abs(tracker.center.y-.7)<.001);
+ assert.equal(tracker.center.y,.5);
  assert.equal(tracker.update({...body,x:-.5,y:.2}),0);
 });
 test('occlusion and large movement cannot calibrate a false neutral',()=>{
