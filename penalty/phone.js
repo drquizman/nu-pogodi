@@ -47,6 +47,7 @@ async function startCamera(){
       }
     };
     worker.onerror=()=>{if(current===generation){clearTimeout(timeout);stopCamera('Этот браузер не запустил распознавание. Открой ссылку в Chrome или Safari.');}};
+    worker.postMessage({type:'init'});
     try{wake=await navigator.wakeLock?.request('screen');}catch{}
   }catch(e){if(current!==generation)return;clearTimeout(timeout);stopCamera(e.name==='NotAllowedError'?'Доступ к камере не разрешён. Разреши его в настройках сайта и попробуй снова.':e.name==='NotFoundError'?'Камера не найдена. Открой ссылку на телефоне.':'Не удалось включить камеру. Закрой другие приложения, использующие её, и попробуй снова.');}
 }
