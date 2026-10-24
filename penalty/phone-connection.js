@@ -1,4 +1,4 @@
-import {cloud,ensureSession,validMessage} from './cloud.js';
+import {cloud,ensureSession,validMessage} from './cloud.js?v=intent-gate-7';
 export class PhoneConnection{
   constructor(credentials,receive,status,options={}){this.client=options.client||cloud;this.login=options.ensureSession||ensureSession;this.sender=crypto.randomUUID();this.credentials=credentials;this.receive=receive;this.status=status;this.stopped=false;this.channels=[];this.ready=new Set();this.lastPeer=0;this.peer=false;this.generation=0;this.lastSeq=-1;void this.connect();}
   setPeer(value){if(this.peer!==value){this.peer=value;this.receive({type:this.credentials.role==='host'?'peer':'host',connected:value});}}

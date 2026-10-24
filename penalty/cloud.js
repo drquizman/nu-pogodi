@@ -4,7 +4,7 @@ import {SUPABASE_URL,SUPABASE_ANON_KEY} from './cloud-config.js';
 export const cloud=createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:false,detectSessionInUrl:false,autoRefreshToken:true}});
 let login;
 export function ensureSession(){return login??=(async()=>{const {error}=await cloud.auth.signInAnonymously();if(error)throw error;})().catch(e=>{login=null;throw e;});}
-export function controllerURL(id,key,base=location.href){const u=new URL('./phone.html',base);u.search='';u.hash=new URLSearchParams({room:id,key}).toString();return u.href;}
+export function controllerURL(id,key,base=location.href){const u=new URL('./phone.html',base);u.search='?v=intent-gate-7';u.hash=new URLSearchParams({room:id,key}).toString();return u.href;}
 async function seatInfo(seat){const phoneURL=controllerURL(seat.id,seat.joinKey);return {...seat,phoneURL,qr:await toDataURL(phoneURL,{width:300,margin:2,errorCorrectionLevel:'M'})};}
 export async function createSeat(){await ensureSession();const {data,error}=await cloud.rpc('np_create_room');if(error)throw error;return seatInfo(data);}
 export async function resumeSeat(seat){
@@ -18,6 +18,7 @@ export function validMessage(role,m){
   if(m.type==='heartbeat')return true;
   if(role==='host'){
     if(m.type==='action')return ['start','pause'].includes(m.action);
+    if(m.startProtocol!==undefined&&(m.startProtocol!=='intentional-palm-7'||typeof m.startNeutral!=='boolean'||typeof m.startGesture!=='boolean'||(m.startGesture&&(!m.startAnchor||!Number.isFinite(m.startAnchor.x)||!Number.isFinite(m.startAnchor.y)||![15,16].includes(m.startAnchor.side)))))return false;
     return m.type==='pose'&&Number.isSafeInteger(m.seq)&&typeof m.tracked==='boolean'&&(m.startProgress===undefined||(Number.isFinite(m.startProgress)&&m.startProgress>=0&&m.startProgress<=1))&&(!m.tracked||((m.zone===null||(Number.isInteger(m.zone)&&m.zone>=0&&m.zone<12))&&validHand(m.leftHand)&&validHand(m.rightHand)));
   }
   return m.type==='closed'||(m.type==='state'&&['ready','runup','flight','result'].includes(m.phase)&&Number.isFinite(m.saves)&&Number.isFinite(m.goals));

@@ -1,15 +1,17 @@
-import {PhoneConnection} from './phone-connection.js';
-import {createSeat,resumeSeat} from './cloud.js';
+import {PhoneConnection} from './phone-connection.js?v=intent-gate-7';
+import {createSeat,resumeSeat} from './cloud.js?v=intent-gate-7';
+import {IntentionalStart,START_PROTOCOL} from './palm.js?v=intent-gate-7';
 export function initPhoneHost(){
   const $=id=>document.getElementById(id),button=$('connect-phone'),dialog=$('phone-dialog'),panel=$('motion-setup');
-  let seat,connection,phone=false,lastPose=0,lastState='',lastSent=0,busy=false,generation=0,mode='phone',tracked=false;
+  let seat,connection,phone=false,lastPose=0,lastState='',lastSent=0,busy=false,generation=0,mode='phone',tracked=false,startPhase='lower';
+  const starter=new IntentionalStart();
   function text(s){$('phone-status').textContent=s;$('pair-message').textContent=s;$('motion-status').textContent=s;}
   function layout(){
     document.body.dataset.controls=mode;
     panel.hidden=mode!=='phone'||dialog.open||window.penalty.getState().auto;
-    $('motion-title').innerHTML=tracked?'Покажи открытую ладонь<br>в камеру на 2 секунды':'Встань в кадр<br>покажи пояс и обе кисти';
+    $('motion-title').innerHTML=tracked?(startPhase==='lower'?'Сначала опусти обе руки':startPhase==='show'?'Подними одну ладонь к лицу<br>вторую руку оставь внизу':'Держи ладонь неподвижно<br>2 секунды'):'Встань в кадр<br>покажи пояс и обе кисти';
   }
-  function lost(s){tracked=false;lastPose=0;$('palm-progress').style.width='0%';window.penalty.stopMotion();text(s);layout();}
+  function lost(s){starter.reset();startPhase='lower';tracked=false;lastPose=0;$('palm-progress').style.width='0%';window.penalty.stopMotion();text(s);layout();}
   function showSeat(){
     $('phone-qr').src=seat.qr;$('phone-qr').hidden=false;$('phone-link').href=seat.phoneURL;$('phone-link').hidden=false;
   }
@@ -26,12 +28,12 @@ export function initPhoneHost(){
       if(m.type==='pose'){
         lastPose=performance.now();tracked=m.tracked;window.penalty.setMotionPose(m);
         text(tracked?'Камера видит тебя':m.guide||'Покажи пояс и обе кисти');
-        $('palm-progress').style.width=`${Math.round((m.startProgress||0)*100)}%`;
+        const hold=starter.update({neutral:m.startNeutral===true,gesture:m.startGesture===true,anchor:m.startAnchor},m.startProtocol===START_PROTOCOL&&m.tracked&&!m.held&&!window.penalty.getState().auto,performance.now());
+        startPhase=hold.phase;$('palm-progress').style.width=`${Math.round(hold.progress*100)}%`;
+        if(hold.start)window.penalty.startAuto();
         if(dialog.open)dialog.close();layout();
       }
-      if(m.type==='action'&&m.action==='start'&&tracked&&lastPose&&performance.now()-lastPose<700&&window.penalty.getState().input==='motion'){
-        window.penalty.startAuto();layout();
-      }
+      // Start is decided here from fresh gesture frames; legacy actions cannot start.
       if(m.type==='action'&&m.action==='pause'){window.penalty.pauseAuto();layout();}
     },online=>{if(current===generation&&!online)lost('Связь потеряна · переподключаемся');});
   }
@@ -64,3 +66,4 @@ export function initPhoneHost(){
   },200);
   void pair();
 }
+

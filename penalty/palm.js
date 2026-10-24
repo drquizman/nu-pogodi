@@ -20,8 +20,10 @@ export function isPresentedPalm(points,world,body){
   if(torso<.06||width<.05)return false;
   const wrist=points[0],side=[15,16].filter(i=>visible(body[i])).sort((a,b)=>Math.hypot(body[a].x-wrist.x,body[a].y-wrist.y)-Math.hypot(body[b].x-wrist.x,body[b].y-wrist.y))[0];
   if(side===undefined||!visible(body[side-2]))return false;
+  const other=side===15?16:15;
+  if(!visible(body[other])||body[other].y<shoulderY+torso*.7)return false;
   const elbow=body[side-2];
-  if(wrist.y>shoulderY+torso*.12||elbow.y-wrist.y<torso*.15||Math.abs(wrist.x-(body[11].x+body[12].x)/2)>width*1.4)return false;
+  if(wrist.y>shoulderY+torso*.05||wrist.y<shoulderY-torso*.9||elbow.y-wrist.y<torso*.2||Math.abs(wrist.x-(body[11].x+body[12].x)/2)>width*.95)return false;
   const height=Math.hypot(points[9].x-wrist.x,points[9].y-wrist.y);
   if(height<.01||[8,12,16,20].some(i=>points[i].y>wrist.y-height*.5))return false;
   // Palm plane must face the lens; an edge-on hand cannot activate the timer.
@@ -29,26 +31,40 @@ export function isPresentedPalm(points,world,body){
   const n=[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
   return Math.abs(n[2])/Math.hypot(...n)>.65;
 }
-export class PalmHold{
+export const START_PROTOCOL='intentional-palm-7';
+export function handsLowered(body){
+  if(!body||![11,12,15,16,23,24].every(i=>body[i]&&Number.isFinite(body[i].y)&&(body[i].visibility??1)>=.4))return false;
+  const shoulder=(body[11].y+body[12].y)/2,torso=(body[23].y+body[24].y)/2-shoulder;
+  return torso>.06&&[15,16].every(i=>body[i].y>shoulder+torso*.7);
+}
+export function palmAnchor(points,body){
+  if(!points?.[0]||!body?.[24])return null;
+  const cx=(body[11].x+body[12].x)/2,sy=(body[11].y+body[12].y)/2,width=Math.abs(body[11].x-body[12].x),torso=(body[23].y+body[24].y)/2-sy;
+  if(width<.05||torso<.06)return null;
+  const side=Math.hypot(body[15].x-points[0].x,body[15].y-points[0].y)<Math.hypot(body[16].x-points[0].x,body[16].y-points[0].y)?15:16;
+  return {x:(points[0].x-cx)/width,y:(points[0].y-sy)/torso,side};
+}
+export class IntentionalStart{
   constructor(){this.reset();}
-  clearTiming(){this.elapsed=0;this.last=null;this.lastOpen=null;this.wasOpen=false;}
-  reset(){this.clearTiming();this.locked=false;this.releaseSince=null;}
-  update(open,enabled,now){
-    if(!enabled){this.clearTiming();this.releaseSince=null;return {progress:0,start:false};}
-    if(this.locked){
-      if(open)this.releaseSince=null;
-      else{this.releaseSince??=now;if(now-this.releaseSince>=350){this.locked=false;this.releaseSince=null;this.clearTiming();}}
-      return {progress:0,start:false};
+  reset(){this.armed=false;this.neutralAt=null;this.since=null;this.last=null;this.anchor=null;this.fired=false;}
+  update(sample,enabled,now){
+    if(!enabled){this.reset();return {progress:0,start:false,phase:'lower'};}
+    if(this.last!==null&&(now-this.last>450||now<this.last)){this.since=null;this.neutralAt=null;this.anchor=null;}
+    this.last=now;
+    if(!this.armed){
+      if(sample.neutral&&!sample.gesture){this.neutralAt??=now;if(now-this.neutralAt>=500){this.armed=true;this.fired=false;}}
+      else this.neutralAt=null;
+      return {progress:0,start:false,phase:this.armed?'show':'lower'};
     }
-    if(!open){
-      if(this.lastOpen===null||now-this.lastOpen>300)this.reset();
-      this.wasOpen=false;this.last=now;return {progress:Math.min(1,this.elapsed/2000),start:false};
+    const p=sample.anchor;
+    if(!sample.gesture||!p||!Number.isFinite(p.x)||!Number.isFinite(p.y)||![15,16].includes(p.side)){
+      this.since=null;this.anchor=null;
+      return {progress:0,start:false,phase:'show'};
     }
-    if(this.lastOpen===null||now-this.lastOpen>600)this.reset();
-    if(this.wasOpen&&this.last!==null)this.elapsed+=now-this.last;
-    this.last=now;this.lastOpen=now;this.wasOpen=true;
-    const progress=Math.min(1,this.elapsed/2000),start=progress===1;
-    if(start)this.locked=true;
-    return {progress,start};
+    if(this.since===null||!this.anchor||this.anchor.side!==p.side||Math.hypot(p.x-this.anchor.x,p.y-this.anchor.y)>.18){this.since=now;this.anchor={...p};}
+    const progress=Math.min(1,(now-this.since)/2000),start=progress===1&&!this.fired;
+    if(start){this.fired=true;this.armed=false;this.neutralAt=null;}
+    return {progress,start,phase:'hold'};
   }
 }
+
