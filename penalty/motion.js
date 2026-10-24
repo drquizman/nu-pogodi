@@ -1,5 +1,5 @@
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const visible=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&(p.visibility??1)>=.5;
+const visible=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&(p.visibility??1)>=.4;
 export function analyzePose(points){
   const ls=points[11],rs=points[12],lh=points[23],rh=points[24],lw=points[15],rw=points[16];
   const lost=guide=>({tracked:false,zone:null,guide});
@@ -27,14 +27,20 @@ export function analyzePose(points){
   return {tracked:true,zone,leftHand:hand(lw),rightHand:hand(rw),guide};
 }
 export class MotionTracker{
-  constructor(){this.candidate=null;this.since=0;this.zone=null;this.hands=null;}
+  constructor(){this.candidate=null;this.since=0;this.zone=null;this.hands=null;this.lastResult=null;this.lastSeen=-Infinity;}
   update(points,now){
     const result=analyzePose(points);
-    if(!result.tracked){this.zone=null;this.candidate=null;this.hands=null;return result;}
+    if(!result.tracked){
+      const previous=this.lastResult,dive=previous?.zone!==null&&previous?.zone!==undefined&&[0,3].includes(previous.zone%4);
+      // The clock is anchored to the last observed body, never to a held frame.
+      if(previous&&now-this.lastSeen<=(dive?1300:350))return {...structuredClone(previous),held:true,guide:dive?'Завершаем прыжок':'Восстанавливаем отслеживание'};
+      this.zone=null;this.candidate=null;this.hands=null;this.lastResult=null;return result;
+    }
     if(result.zone!==this.candidate){this.candidate=result.zone;this.since=now;}
     if(result.zone===null||now-this.since>=100)this.zone=this.candidate;
     if(!this.hands)this.hands={leftHand:{...result.leftHand},rightHand:{...result.rightHand}};
     else for(const key of ['leftHand','rightHand'])for(const axis of ['x','y','z'])this.hands[key][axis]+=(result[key][axis]-this.hands[key][axis])*.45;
-    return {...result,...structuredClone(this.hands),zone:this.zone};
+    this.lastSeen=now;this.lastResult={...result,...structuredClone(this.hands),zone:this.zone,held:false};
+    return this.lastResult;
   }
 }

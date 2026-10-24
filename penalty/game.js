@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { BALL_RADIUS, KEEPER_Z, ZONES, zoneForKey, canSaveShot, defenseWeight } from './zones.js';
 import { StadiumAudio, whistleLead, runupElapsed } from './sounds.js';
-import {initPhoneHost} from './phone-host.js?v=hands-free-4';
+import {initPhoneHost} from './phone-host.js?v=tracking-5';
 
 const $=id=>document.getElementById(id), V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
 const clamp=T.MathUtils.clamp, lerp=T.MathUtils.lerp, smooth=u=>{u=clamp(u,0,1);return u*u*(3-2*u);};
@@ -165,7 +165,7 @@ function touchesKeeper(p){
   return false;
 }
 function keeperPose(t,dt){
-  const external=state.pose&&performance.now()-state.poseAt<500;
+  const external=state.pose&&performance.now()-state.poseAt<(state.source==='motion'?1600:500);
   if(!external&&['pose','motion'].includes(state.source)){if(state.source==='motion')stopMotion();else{state.source='manual';state.pose=null;state.targetX=0;}$('control-hint').textContent='Сигнал позы потерян · доступны 12 клавиш';}
   let defense=state.defense,weight=0,zone=null;
   if(defense){
@@ -305,3 +305,4 @@ try{
   initPhoneHost();
   window.dispatchEvent(new Event('penalty-ready'));
 }catch(error){console.error(error);$('loading').replaceChildren(document.createTextNode('Не удалось загрузить персонажей. Обновите страницу или запустите её через Запустить.bat.'));}
+

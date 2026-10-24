@@ -1,16 +1,16 @@
 import {PhoneConnection} from './phone-connection.js';
-import {MotionTracker} from './motion.js?v=hands-free-4';
-import {PalmHold} from './palm.js';
-import {drawSilhouette} from './silhouette.js';
+import {MotionTracker} from './motion.js?v=tracking-5';
+import {PalmHold} from './palm.js?v=tracking-5';
+import {drawSilhouette} from './silhouette.js?v=tracking-5';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.hash.slice(1)),room=params.get('room'),key=params.get('key');
 const video=$('video'),canvas=$('skeleton'),palm=new PalmHold();
-let connection,online=false,host=false,stream,worker,workerReady=false,busy=false,starting=false,generation=0,lastVideo=-1,lastFrame=0,lastPose=0,lastTracked=0,lastGood,seq=0,wake,timeout,auto=false,startPending=false,tracker=new MotionTracker();
+let connection,online=false,host=false,stream,worker,workerReady=false,busy=false,starting=false,generation=0,lastVideo=-1,lastFrame=0,lastPose=0,seq=0,wake,timeout,auto=false,startPending=false,tracker=new MotionTracker();
 function guide(message){$('guide').textContent=message;$('guide').hidden=!message;}
 function sendPose(p={tracked:false,zone:null,guide:'Включи камеру на телефоне'}){connection?.send({type:'pose',...p,seq:++seq});}
 function stopCamera(message='Включи камеру на телефоне'){
   generation++;clearTimeout(timeout);starting=false;workerReady=false;busy=false;
   stream?.getTracks().forEach(t=>t.stop());stream=null;worker?.terminate();worker=null;video.srcObject=null;
-  lastPose=0;lastTracked=0;lastGood=null;lastVideo=-1;tracker=new MotionTracker();palm.reset();startPending=false;void wake?.release();wake=null;
+  lastPose=0;lastVideo=-1;tracker=new MotionTracker();palm.reset();startPending=false;void wake?.release();wake=null;
   document.body.classList.remove('camera-on');$('camera-start').hidden=false;$('camera-start').disabled=!online;$('camera-start').textContent='Включить камеру';
   canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);guide(message);sendPose({tracked:false,zone:null,guide:message});
 }
@@ -25,21 +25,20 @@ async function startCamera(){
     stream=acquired;video.srcObject=stream;await video.play();if(current!==generation)return;
     document.body.classList.add('camera-on');$('camera-start').hidden=true;guide('Загружаем распознавание…');
     sendPose({tracked:false,zone:null,guide:'Загружаем распознавание на телефоне…'});
-    worker=new Worker(new URL('./pose-worker.js?v=hands-free-4',import.meta.url));
+    worker=new Worker(new URL('./pose-worker.js?v=tracking-5',import.meta.url));
     timeout=setTimeout(()=>{if(current===generation&&!workerReady)stopCamera('Модель не загрузилась. Проверь интернет и попробуй снова.');},60000);
     worker.onmessage=e=>{
       if(current!==generation)return;
       if(e.data.type==='ready'){clearTimeout(timeout);starting=false;workerReady=true;lastPose=performance.now();guide('Смотри на экран компьютера');}
       if(e.data.type==='error')stopCamera(`Не удалось запустить распознавание: ${e.data.message||'ошибка модели'}`);
       if(e.data.type==='pose'){
-        busy=false;lastPose=performance.now();drawSilhouette(canvas,e.data.points,video.videoWidth||640,video.videoHeight||480);
-        let result=tracker.update(e.data.points,lastPose);
-        if(result.tracked){lastTracked=lastPose;lastGood=result;}
-        else if(lastGood&&lastPose-lastTracked<180)result=lastGood;
+        busy=false;lastPose=performance.now();
+        const result=tracker.update(e.data.points,lastPose);
         const hold=palm.update(e.data.openPalm===true,!auto&&!startPending&&host&&online&&result.tracked,lastPose);
+        drawSilhouette(canvas,e.data.points,video.videoWidth||640,video.videoHeight||480,{palms:e.data.palms||[],progress:hold.progress});
         sendPose({...result,startProgress:hold.progress});
         if(hold.start){startPending=true;void connection?.send({type:'action',action:'start'});}
-        guide('');
+        guide(auto?'':hold.progress>0?`Ладонь найдена · ${Math.round(hold.progress*100)}%`:e.data.palms?.length?'Раскрой ладонь к камере':'Покажи ладонь на уровне лица');
       }
     };
     worker.onerror=e=>{if(current===generation)stopCamera(`Ошибка распознавания: ${e.message||'открой ссылку в Chrome или Safari'}`);};
@@ -72,3 +71,4 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCamera(
 window.addEventListener('pagehide',()=>{stopCamera();connection?.close();});
 setInterval(()=>{if(workerReady&&performance.now()-lastPose>6000)stopCamera('Камера перестала отвечать. Включи её снова.');if(!stream)sendPose();},500);
 requestAnimationFrame(frame);
+

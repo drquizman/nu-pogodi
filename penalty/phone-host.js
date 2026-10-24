@@ -57,7 +57,7 @@ export function initPhoneHost(){
   dialog.addEventListener('cancel',e=>{e.preventDefault();keyboard();});
   setInterval(()=>{
     if(mode!=='phone')return;
-    if(phone&&lastPose&&performance.now()-lastPose>900)lost('Камера потеряла тебя · вернись в кадр');
+    if(phone&&lastPose&&performance.now()-lastPose>1600)lost('Камера потеряла тебя · вернись в кадр');
     const s=window.penalty.getState(),body={type:'state',phase:s.phase,auto:s.auto,saves:s.saves,goals:s.goals,input:s.input},encoded=JSON.stringify(body);
     if(encoded!==lastState||performance.now()-lastSent>1000){connection?.send(body);lastState=encoded;lastSent=performance.now();}
     layout();
