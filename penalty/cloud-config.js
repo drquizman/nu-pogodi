@@ -1,0 +1,3 @@
+// Public browser configuration, identical to Nu Pogodi. No service-role credentials.
+export const SUPABASE_URL="https://dmhdfjdullccoheavcec.supabase.co";
+export const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtaGRmamR1bGxjY29oZWF2Y2VjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA2MDgyMzIsImV4cCI6MjEwNjE4NDIzMn0.5Yh-UEsNRy4d3szeuvLzxnt9YCA_XXffa0gYdXVMxAM";

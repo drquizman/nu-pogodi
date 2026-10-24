@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#102822">
+  <title>Один на один — пенальти</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+</head>
+<body>
+  <header>
+    <a class="brand" href="./" aria-label="Один на один"><span class="brand-mark">11</span><span>ОДИН НА ОДИН<span class="brand-sub">ТВОЙ ВЫХОД НА ПОЛЕ</span></span></a>
+    <div class="header-right"><span class="live-dot"></span> ТРЕНИРОВКА <button id="sound" class="sound-button" aria-label="Выключить звук" aria-pressed="true">♪ ВКЛ</button><button id="fullscreen" class="icon-button" aria-label="На весь экран">⛶</button></div>
+  </header>
+  <main>
+    <section class="intro"><div><p class="eyebrow">МИНИ-ФУТБОЛ / 3D ПРОТОТИП</p><h1>Всё решает <em>один сейв.</em></h1></div><p class="intro-note">Один бьёт. Другой спасает.<br>Встань на ворота и поймай свой момент.</p></section>
+    <section id="arena" class="arena" aria-label="Трёхмерное футбольное поле">
+      <canvas id="game" tabindex="0" aria-label="Поле. QWER, ASDF, ZXCV или ЙЦУК, ФЫВА, ЯЧСМ — 12 точек защиты. Пробел — удар"></canvas>
+      <div id="target-layer" class="target-layer" aria-label="12 точек в воротах"></div>
+      <div class="arena-top"><div class="venue"><span class="live-dot"></span> ДВОР № 11<span>Вечерняя тренировка</span></div><div class="scoreboard"><div><span>СЕЙВЫ</span><strong id="saves">0</strong></div><b>:</b><div><span>ГОЛЫ</span><strong id="goals">0</strong></div></div><button id="view" class="glass-button" title="Переключить камеру">↻ <span>Ракурс</span></button></div>
+      <div id="loading" class="loading"><span class="spinner"></span><span>Выходим на поле…</span></div>
+      <div id="result" class="result" role="status" aria-live="polite"><span id="result-sub"></span><strong id="result-title"></strong></div>
+      <div class="arena-bottom"><span class="scene-tag"><i></i> BALL MAN · 2 ИГРОКА</span><span id="state-label">ГОТОВ К УДАРУ</span><span class="scene-tag">11 МЕТРОВ ДО СЛАВЫ</span></div>
+    </section>
+    <section class="control-bar">
+      <div class="control-info"><span class="control-icon">↔</span><div><strong>Ты — вратарь</strong><p id="control-hint">Исходная стойка по центру · только 12 клавиш</p></div></div>
+      <div class="actions"><label class="auto-toggle"><input id="auto" type="checkbox"><span class="toggle"></span> Автоудары</label><button id="shoot" class="shoot" disabled>Пробить пенальти <span>↗</span></button></div>
+    </section>
+    <section class="defense-guide" aria-label="Схема управления вратарём">
+      <div class="keyboard-map"><span>ВЕРХ</span><kbd class="two">Q <small>Й</small></kbd><kbd>W <small>Ц</small></kbd><kbd>E <small>У</small></kbd><kbd class="two">R <small>К</small></kbd><span>СЕРЕДИНА</span><kbd class="two">A <small>Ф</small></kbd><kbd>S <small>Ы</small></kbd><kbd>D <small>В</small></kbd><kbd class="two">F <small>А</small></kbd><span>НИЗ</span><kbd class="two">Z <small>Я</small></kbd><kbd>X <small>Ч</small></kbd><kbd>C <small>С</small></kbd><kbd class="two">V <small>М</small></kbd></div>
+      <div class="defense-legend"><span><i class="one"></i> W E S D X C / Ц У Ы В Ч С — одной рукой</span><span><i class="two"></i> Q R A F Z V / Й К Ф А Я М — прыжок двумя руками</span><small>Нажми клавишу светящейся точки. Сейв засчитывается только в выбранной зоне. Мышь отключена.</small></div>
+    </section>
+    <section class="below"><div class="keys"><span><kbd>Пробел</kbd> удар</span><span>Мышь отключена · стойка по центру</span><button id="reset">Начать заново ↺</button></div><div class="phone-status"><button id="connect-phone">▯ Подключить телефон</button><span id="phone-status">Управляй вратарём движениями рук</span></div></section>
+    <dialog id="phone-dialog"><button id="close-phone-dialog" class="dialog-close" aria-label="Закрыть подключение">×</button><p class="eyebrow">ТЕЛЕФОН — ТВОЙ КОНТРОЛЛЕР</p><h2>Встань на ворота.</h2><p>Отсканируй QR-код телефоном. Открой ссылку и включи камеру.</p><img id="phone-qr" width="260" height="260" alt="QR-код подключения телефона" hidden><a id="phone-link" target="_blank" rel="noreferrer" hidden>Открыть контроллер на телефоне ↗</a><p id="pair-message" role="status">Готовим подключение…</p><div class="pair-gestures">Одна рука вбок — средняя точка.<br>Обе руки в одну сторону — прыжок.<br>Подними / опусти руки — верх / низ.</div><p class="privacy-note">Видео остаётся на телефоне. В игру передаются только положения рук.</p><button id="disconnect-phone" hidden>Отключить телефон</button></dialog>
+  </main>
+  <footer><span>Маленькое поле. Большой момент.</span><span>Персонаж <a href="https://sketchfab.com/3d-models/ball-man-free-rigged-base-mesh-uvs-a3372cd5fe744f17ac5c83e08a8fc41c" target="_blank" rel="noreferrer">Ball Man — Redninjamp</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a></span></footer>
+  <script type="module" src="./game.js"></script>
+</body>
+</html>

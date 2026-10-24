@@ -1,0 +1,12 @@
+Персонаж: Ball Man - Free Rigged Base Mesh + UVs
+Автор: Redninjamp
+Источник: https://sketchfab.com/3d-models/ball-man-free-rigged-base-mesh-uvs-a3372cd5fe744f17ac5c83e08a8fc41c
+Лицензия: Creative Commons Attribution 4.0 International
+https://creativecommons.org/licenses/by/4.0/
+
+Изменения: белый материал, адаптация управления экспортированным скелетом,
+собственная анимация, реквизит, сцены и монтаж в Blender.
+Исходные веса кожи сохранены.
+
+При публикации видео сохраните указание автора персонажа и ссылку на лицензию
+в описании или сопровождающих титрах.
