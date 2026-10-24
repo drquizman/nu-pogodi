@@ -31,12 +31,12 @@ async function startCamera(){
     stream=acquired;video.srcObject=stream;await video.play();if(current!==generation)return;
     $('placeholder').hidden=true;$('camera-start').hidden=true;$('badge').textContent='Загружаем распознавание…';$('guide').textContent='Подготавливаем модель. Встань так, чтобы были видны кисти и пояс.';
     document.querySelector('.camera').classList.toggle('back',facing==='environment');
-    worker=new Worker('./pose-worker.js');
+    worker=new Worker(new URL('./pose-worker.js?v=nu-pogodi-worker-3',import.meta.url));
     timeout=setTimeout(()=>{if(current===generation&&!workerReady)stopCamera('Модель загружается слишком долго. Проверь интернет и включи камеру снова.');},45000);
     worker.onmessage=e=>{
       if(current!==generation)return;
       if(e.data.type==='ready'){clearTimeout(timeout);starting=false;workerReady=true;lastPose=performance.now();$('badge').textContent='Ищем человека…';}
-      if(e.data.type==='error'){clearTimeout(timeout);stopCamera('Распознавание не запустилось. Попробуй включить камеру снова.');}
+      if(e.data.type==='error'){clearTimeout(timeout);stopCamera(`Распознавание не запустилось: ${e.data.message||'ошибка модели'}`);}
       if(e.data.type==='pose'){
         busy=false;lastPose=performance.now();draw(e.data.points);
         let result=tracker.update(e.data.points,lastPose);
@@ -46,7 +46,7 @@ async function startCamera(){
         $('guide').textContent=result.zone===null?result.guide:`${ZONES[result.zone].ru.toUpperCase()} · ${result.guide}`;refresh();
       }
     };
-    worker.onerror=()=>{if(current===generation){clearTimeout(timeout);stopCamera('Этот браузер не запустил распознавание. Открой ссылку в Chrome или Safari.');}};
+    worker.onerror=e=>{if(current===generation){clearTimeout(timeout);stopCamera(`Ошибка распознавания: ${e.message||'браузер не запустил обработчик камеры'}. Открой ссылку в Chrome или Safari.`);}};
     worker.postMessage({type:'init'});
     try{wake=await navigator.wakeLock?.request('screen');}catch{}
   }catch(e){if(current!==generation)return;clearTimeout(timeout);stopCamera(e.name==='NotAllowedError'?'Доступ к камере не разрешён. Разреши его в настройках сайта и попробуй снова.':e.name==='NotFoundError'?'Камера не найдена. Открой ссылку на телефоне.':'Не удалось включить камеру. Закрой другие приложения, использующие её, и попробуй снова.');}
@@ -55,7 +55,7 @@ async function frame(now){
   requestAnimationFrame(frame);
   if(!workerReady||!stream||busy||video.readyState<2||video.currentTime===lastVideo||now-lastFrame<65)return;
   lastVideo=video.currentTime;lastFrame=now;busy=true;const current=generation;
-  try{const scale=Math.min(1,480/video.videoWidth),bitmap=await createImageBitmap(video,{resizeWidth:Math.round(video.videoWidth*scale),resizeHeight:Math.round(video.videoHeight*scale)});if(current!==generation){bitmap.close();return;}worker.postMessage({type:'frame',frame:bitmap,at:performance.now()},[bitmap]);}
+  try{const scale=Math.min(1,640/Math.max(video.videoWidth,video.videoHeight)),bitmap=await createImageBitmap(video,{resizeWidth:Math.round(video.videoWidth*scale),resizeHeight:Math.round(video.videoHeight*scale)});if(current!==generation){bitmap.close();return;}worker.postMessage({type:'frame',frame:bitmap,at:performance.now()},[bitmap]);}
   catch{if(current===generation)stopCamera('Не удалось прочитать кадр камеры. Попробуй снова.');}
 }
 if(!room||!key){$('connection').textContent='Нет подключения';$('guide').textContent='Открой игру на компьютере и отсканируй QR-код «Подключить телефон».';$('camera-start').disabled=true;}
