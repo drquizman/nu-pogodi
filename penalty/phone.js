@@ -1,7 +1,7 @@
 import {PhoneConnection} from './phone-connection.js';
-import {MotionTracker} from './motion.js?v=tracking-5';
-import {PalmHold} from './palm.js?v=tracking-5';
-import {drawSilhouette} from './silhouette.js?v=tracking-5';
+import {MotionTracker} from './motion.js?v=palm-intent-6';
+import {PalmHold} from './palm.js?v=palm-intent-6';
+import {drawSilhouette} from './silhouette.js?v=palm-intent-6';
 const $=id=>document.getElementById(id),params=new URLSearchParams(location.hash.slice(1)),room=params.get('room'),key=params.get('key');
 const video=$('video'),canvas=$('skeleton'),palm=new PalmHold();
 let connection,online=false,host=false,stream,worker,workerReady=false,busy=false,starting=false,generation=0,lastVideo=-1,lastFrame=0,lastPose=0,seq=0,wake,timeout,auto=false,startPending=false,tracker=new MotionTracker();
@@ -25,7 +25,7 @@ async function startCamera(){
     stream=acquired;video.srcObject=stream;await video.play();if(current!==generation)return;
     document.body.classList.add('camera-on');$('camera-start').hidden=true;guide('Загружаем распознавание…');
     sendPose({tracked:false,zone:null,guide:'Загружаем распознавание на телефоне…'});
-    worker=new Worker(new URL('./pose-worker.js?v=tracking-5',import.meta.url));
+    worker=new Worker(new URL('./pose-worker.js?v=palm-intent-6',import.meta.url));
     timeout=setTimeout(()=>{if(current===generation&&!workerReady)stopCamera('Модель не загрузилась. Проверь интернет и попробуй снова.');},60000);
     worker.onmessage=e=>{
       if(current!==generation)return;
@@ -34,11 +34,13 @@ async function startCamera(){
       if(e.data.type==='pose'){
         busy=false;lastPose=performance.now();
         const result=tracker.update(e.data.points,lastPose);
+        if(e.data.palmRejected)palm.clearTiming();
         const hold=palm.update(e.data.openPalm===true,!auto&&!startPending&&host&&online&&result.tracked,lastPose);
-        drawSilhouette(canvas,e.data.points,video.videoWidth||640,video.videoHeight||480,{palms:e.data.palms||[],progress:hold.progress});
+        const presented=!auto&&!startPending&&e.data.openPalm===true;
+        drawSilhouette(canvas,e.data.points,video.videoWidth||640,video.videoHeight||480,{palms:presented?e.data.palms||[]:[],progress:presented?hold.progress:0});
         sendPose({...result,startProgress:hold.progress});
         if(hold.start){startPending=true;void connection?.send({type:'action',action:'start'});}
-        guide(auto?'':hold.progress>0?`Ладонь найдена · ${Math.round(hold.progress*100)}%`:e.data.palms?.length?'Раскрой ладонь к камере':'Покажи ладонь на уровне лица');
+        guide(presented?`Ладонь найдена · ${Math.round(hold.progress*100)}%`:'');
       }
     };
     worker.onerror=e=>{if(current===generation)stopCamera(`Ошибка распознавания: ${e.message||'открой ссылку в Chrome или Safari'}`);};
@@ -60,7 +62,7 @@ if(!room||!key){guide('Открой ссылку из QR-кода на экра�
 else connection=new PhoneConnection({room,role:'phone',key},m=>{
   if(m.type==='fatal')stopCamera(m.message);
   if(m.type==='host'){host=m.connected;if(!host){palm.reset();startPending=false;}}
-  if(m.type==='state'){auto=m.auto===true;startPending=false;if(auto)palm.reset();}
+  if(m.type==='state'){auto=m.auto===true;startPending=false;}
 },(connected,code)=>{
   online=connected;$('camera-start').disabled=!online;
   if(!stream)guide(online?'':'Подключаемся…');
@@ -71,4 +73,5 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCamera(
 window.addEventListener('pagehide',()=>{stopCamera();connection?.close();});
 setInterval(()=>{if(workerReady&&performance.now()-lastPose>6000)stopCamera('Камера перестала отвечать. Включи её снова.');if(!stream)sendPose();},500);
 requestAnimationFrame(frame);
+
 

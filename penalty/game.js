@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { BALL_RADIUS, KEEPER_Z, ZONES, zoneForKey, canSaveShot, defenseWeight } from './zones.js';
 import { StadiumAudio, whistleLead, runupElapsed } from './sounds.js';
-import {initPhoneHost} from './phone-host.js?v=tracking-5';
+import {initPhoneHost} from './phone-host.js?v=palm-intent-6';
 
 const $=id=>document.getElementById(id), V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
 const clamp=T.MathUtils.clamp, lerp=T.MathUtils.lerp, smooth=u=>{u=clamp(u,0,1);return u*u*(3-2*u);};
@@ -305,4 +305,5 @@ try{
   initPhoneHost();
   window.dispatchEvent(new Event('penalty-ready'));
 }catch(error){console.error(error);$('loading').replaceChildren(document.createTextNode('Не удалось загрузить персонажей. Обновите страницу или запустите её через Запустить.bat.'));}
+
 
