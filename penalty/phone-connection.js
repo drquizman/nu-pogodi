@@ -1,6 +1,6 @@
 import {cloud,ensureSession,validMessage} from './cloud.js';
 export class PhoneConnection{
-  constructor(credentials,receive,status,options={}){this.client=options.client||cloud;this.login=options.ensureSession||ensureSession;this.credentials=credentials;this.receive=receive;this.status=status;this.stopped=false;this.channels=[];this.ready=new Set();this.lastPeer=0;this.peer=false;this.generation=0;this.lastSeq=-1;void this.connect();}
+  constructor(credentials,receive,status,options={}){this.client=options.client||cloud;this.login=options.ensureSession||ensureSession;this.sender=crypto.randomUUID();this.credentials=credentials;this.receive=receive;this.status=status;this.stopped=false;this.channels=[];this.ready=new Set();this.lastPeer=0;this.peer=false;this.generation=0;this.lastSeq=-1;void this.connect();}
   setPeer(value){if(this.peer!==value){this.peer=value;this.receive({type:this.credentials.role==='host'?'peer':'host',connected:value});}}
   async clear(){clearInterval(this.pulse);const channels=this.channels.splice(0);this.ready.clear();await Promise.allSettled(channels.map(c=>this.client.removeChannel(c)));}
   async connect(){
@@ -17,7 +17,7 @@ export class PhoneConnection{
         if(who===other)channel.on('broadcast',{event:'message'},({payload:m})=>{
           if(this.stopped||generation!==this.generation||!validMessage(role,m))return;
           this.lastPeer=performance.now();this.setPeer(true);if(m.type==='heartbeat')return;
-          if(m.type==='pose'){if(m.seq<=this.lastSeq)return;this.lastSeq=m.seq;}
+          if(m.type==='pose'){if(this.lastSender!==m.sender){this.lastSender=m.sender;this.lastSeq=-1;}if(m.seq<=this.lastSeq)return;this.lastSeq=m.seq;}
           if(m.type==='closed'){this.receive({type:'fatal',message:'Экран отключил телефон. Отсканируй новый QR-код.'});this.status(false,1000);this.close();return;}
           this.receive(m);
         });
@@ -32,6 +32,6 @@ export class PhoneConnection{
     }catch{if(!this.stopped){this.status(false);this.setPeer(false);this.retryConnect();}}
   }
   retryConnect(){if(this.stopped||this.retry)return;this.retry=setTimeout(()=>{this.retry=null;void this.connect();},2000);}
-  async send(message){if(!this.stopped&&this.ready.size===2&&this.own)return this.own.send({type:'broadcast',event:'message',payload:{...message,app:'penalty-v1'}}).catch(()=>{});}
+  async send(message){if(!this.stopped&&this.ready.size===2&&this.own)return this.own.send({type:'broadcast',event:'message',payload:{...message,app:'penalty-v1',sender:this.sender}}).catch(()=>{});}
   close(){this.stopped=true;this.generation++;clearTimeout(this.retry);this.retry=null;void this.clear();this.setPeer(false);this.status(false);}
 }
