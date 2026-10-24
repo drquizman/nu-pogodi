@@ -9,14 +9,19 @@ export function analyzePose(points){
   const cx=(ls.x+rs.x)/2,orientation=Math.sign(ls.x-rs.x)||1;
   const hand=p=>({x:clamp((p.x-cx)/width*orientation*.45,-1.1,1.1),y:clamp(.92+(hipY-p.y)/torso*.42,.3,2.25),z:.15});
   const xy=p=>({x:(p.x-cx)/width*orientation,h:(hipY-p.y)/torso});
-  const a=xy(lw),b=xy(rw),extended=p=>Math.abs(p.x)>.85;
+  const a=xy(lw),b=xy(rw);
+  // A lowered wrist beside the hip is neutral, even with perspective/noise.
+  // Low saves require a deliberate reach away from the corresponding shoulder.
+  const reach=(p,s)=>p.h>.12&&Math.abs(p.x-s)>.55;
+  const extended=(p,s)=>Math.abs(p.x)>.85&&reach(p,s);
+  const ae=extended(a,xy(ls).x),be=extended(b,xy(rs).x);
   const row=h=>h>1.35?0:h<.55?2:1;
   let zone=null,guide='Одна рука вбок — отбить. Обе в одну сторону — прыжок';
-  if(extended(a)&&extended(b)&&Math.sign(a.x)!==Math.sign(b.x))guide='Для прыжка направь обе руки в одну сторону';
-  else if(Math.sign(a.x)===Math.sign(b.x)&&Math.min(Math.abs(a.x),Math.abs(b.x))>.42&&Math.max(Math.abs(a.x),Math.abs(b.x))>.85&&Math.abs(a.h-b.h)<.8){
+  if(ae&&be&&Math.sign(a.x)!==Math.sign(b.x))guide='Для прыжка направь обе руки в одну сторону';
+  else if(reach(a,xy(ls).x)&&reach(b,xy(rs).x)&&Math.sign(a.x)===Math.sign(b.x)&&Math.min(Math.abs(a.x),Math.abs(b.x))>.42&&Math.max(Math.abs(a.x),Math.abs(b.x))>.85&&Math.abs(a.h-b.h)<.8){
     zone=row((a.h+b.h)/2)*4+(a.x>0?0:3);guide='Прыжок двумя руками';
   }else{
-    const chosen=extended(a)&&!extended(b)?a:extended(b)&&!extended(a)?b:null;
+    const chosen=ae&&!be?a:be&&!ae?b:null;
     if(chosen){zone=row(chosen.h)*4+(chosen.x>0?1:2);guide='Отбивание одной рукой';}
   }
   return {tracked:true,zone,leftHand:hand(lw),rightHand:hand(rw),guide};
@@ -27,7 +32,7 @@ export class MotionTracker{
     const result=analyzePose(points);
     if(!result.tracked){this.zone=null;this.candidate=null;this.hands=null;return result;}
     if(result.zone!==this.candidate){this.candidate=result.zone;this.since=now;}
-    if(now-this.since>=100)this.zone=this.candidate;
+    if(result.zone===null||now-this.since>=100)this.zone=this.candidate;
     if(!this.hands)this.hands={leftHand:{...result.leftHand},rightHand:{...result.rightHand}};
     else for(const key of ['leftHand','rightHand'])for(const axis of ['x','y','z'])this.hands[key][axis]+=(result[key][axis]-this.hands[key][axis])*.45;
     return {...result,...structuredClone(this.hands),zone:this.zone};

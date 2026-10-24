@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { BALL_RADIUS, KEEPER_Z, ZONES, zoneForKey, canSaveShot, defenseWeight } from './zones.js';
 import { StadiumAudio, whistleLead, runupElapsed } from './sounds.js';
-import {initPhoneHost} from './phone-host.js';
+import {initPhoneHost} from './phone-host.js?v=hands-free-4';
 
 const $=id=>document.getElementById(id), V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
 const clamp=T.MathUtils.clamp, lerp=T.MathUtils.lerp, smooth=u=>{u=clamp(u,0,1);return u*u*(3-2*u);};
@@ -296,7 +296,7 @@ window.penalty={
   getZones:()=>structuredClone(ZONES),
   shoot:target=>shoot(target),
   getSoundState:()=>({enabled:audio.enabled,context:audio.context?.state??'locked',events:structuredClone(soundEvents)}),
-  getState:()=>({ready,phase:state.phase,whistleLead:state.whistleLead,saves:state.saves,goals:state.goals,attempts:state.attempts,keeperX:state.keeperX,input:state.source,ball:ball.position.toArray(),ballRadius:BALL_RADIUS,shotZone:state.shotZone,defense:state.defense?{index:state.defense.index,hands:ZONES[state.defense.index].hands}:null,outcome:state.outcome}),
+  getState:()=>({ready,auto:state.auto,phase:state.phase,whistleLead:state.whistleLead,saves:state.saves,goals:state.goals,attempts:state.attempts,keeperX:state.keeperX,input:state.source,ball:ball.position.toArray(),ballRadius:BALL_RADIUS,shotZone:state.shotZone,defense:state.defense?{index:state.defense.index,hands:ZONES[state.defense.index].hands}:null,outcome:state.outcome}),
 };
 try{
   const gltf=await new GLTFLoader().loadAsync('./assets/ball-man.glb');

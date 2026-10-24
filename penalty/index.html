@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#102822">
   <title>Один на один — пенальти</title>
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=hands-free-4">
   <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
 </head>
 <body>
@@ -21,6 +21,7 @@
       <div class="arena-top"><div class="venue"><span class="live-dot"></span> ДВОР № 11<span>Вечерняя тренировка</span></div><div class="scoreboard"><div><span>СЕЙВЫ</span><strong id="saves">0</strong></div><b>:</b><div><span>ГОЛЫ</span><strong id="goals">0</strong></div></div><button id="view" class="glass-button" title="Переключить камеру">↻ <span>Ракурс</span></button></div>
       <div id="loading" class="loading"><span class="spinner"></span><span>Выходим на поле…</span></div>
       <div id="result" class="result" role="status" aria-live="polite"><span id="result-sub"></span><strong id="result-title"></strong></div>
+      <div id="motion-setup" class="motion-setup" hidden><p id="motion-status">Включи камеру на телефоне</p><h2 id="motion-title">Покажи открытую ладонь<br>в камеру на 2 секунды</h2><div class="palm-progress"><i id="palm-progress"></i></div><div class="motion-instructions"><span>Одна рука вбок — отбить</span><span>Две в одну сторону — прыгнуть</span><span>Руки вниз — стойка по центру</span></div><p class="height-hint">Тянись выше — верхний мяч · вбок — средний · вбок и вниз — нижний</p></div>
       <div class="arena-bottom"><span class="scene-tag"><i></i> BALL MAN · 2 ИГРОКА</span><span id="state-label">ГОТОВ К УДАРУ</span><span class="scene-tag">11 МЕТРОВ ДО СЛАВЫ</span></div>
     </section>
     <section class="control-bar">
@@ -32,9 +33,9 @@
       <div class="defense-legend"><span><i class="one"></i> W E S D X C / Ц У Ы В Ч С — одной рукой</span><span><i class="two"></i> Q R A F Z V / Й К Ф А Я М — прыжок двумя руками</span><small>Нажми клавишу светящейся точки. Сейв засчитывается только в выбранной зоне. Мышь отключена.</small></div>
     </section>
     <section class="below"><div class="keys"><span><kbd>Пробел</kbd> удар</span><span>Мышь отключена · стойка по центру</span><button id="reset">Начать заново ↺</button></div><div class="phone-status"><button id="connect-phone">▯ Подключить телефон</button><span id="phone-status">Управляй вратарём движениями рук</span></div></section>
-    <dialog id="phone-dialog"><button id="close-phone-dialog" class="dialog-close" aria-label="Закрыть подключение">×</button><p class="eyebrow">ТЕЛЕФОН — ТВОЙ КОНТРОЛЛЕР</p><h2>Встань на ворота.</h2><p>Отсканируй QR-код телефоном. Открой ссылку и включи камеру.</p><img id="phone-qr" width="260" height="260" alt="QR-код подключения телефона" hidden><a id="phone-link" target="_blank" rel="noreferrer" hidden>Открыть контроллер на телефоне ↗</a><p id="pair-message" role="status">Готовим подключение…</p><div class="pair-gestures">Одна рука вбок — средняя точка.<br>Обе руки в одну сторону — прыжок.<br>Подними / опусти руки — верх / низ.</div><p class="privacy-note">Видео остаётся на телефоне. В игру передаются только положения рук.</p><button id="disconnect-phone" hidden>Отключить телефон</button></dialog>
+    <dialog id="phone-dialog"><h2>Встань на ворота</h2><p>Отсканируй QR-код и включи камеру на телефоне</p><img id="phone-qr" width="300" height="300" alt="QR-код подключения телефона" hidden><a id="phone-link" target="_blank" rel="noreferrer" hidden>Открыть камеру ↗</a><p id="pair-message" role="status">Готовим подключение…</p><button id="close-phone-dialog" class="keyboard-choice">Играть на клавиатуре</button><button id="disconnect-phone" hidden>Отключить телефон</button></dialog>
   </main>
   <footer><span>Маленькое поле. Большой момент.</span><span>Персонаж <a href="https://sketchfab.com/3d-models/ball-man-free-rigged-base-mesh-uvs-a3372cd5fe744f17ac5c83e08a8fc41c" target="_blank" rel="noreferrer">Ball Man — Redninjamp</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a></span></footer>
-  <script type="module" src="./game.js"></script>
+  <script type="module" src="./game.js?v=hands-free-4"></script>
 </body>
 </html>

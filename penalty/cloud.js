@@ -18,7 +18,7 @@ export function validMessage(role,m){
   if(m.type==='heartbeat')return true;
   if(role==='host'){
     if(m.type==='action')return ['start','pause'].includes(m.action);
-    return m.type==='pose'&&Number.isSafeInteger(m.seq)&&typeof m.tracked==='boolean'&&(!m.tracked||((m.zone===null||(Number.isInteger(m.zone)&&m.zone>=0&&m.zone<12))&&validHand(m.leftHand)&&validHand(m.rightHand)));
+    return m.type==='pose'&&Number.isSafeInteger(m.seq)&&typeof m.tracked==='boolean'&&(m.startProgress===undefined||(Number.isFinite(m.startProgress)&&m.startProgress>=0&&m.startProgress<=1))&&(!m.tracked||((m.zone===null||(Number.isInteger(m.zone)&&m.zone>=0&&m.zone<12))&&validHand(m.leftHand)&&validHand(m.rightHand)));
   }
   return m.type==='closed'||(m.type==='state'&&['ready','runup','flight','result'].includes(m.phase)&&Number.isFinite(m.saves)&&Number.isFinite(m.goals));
 }
