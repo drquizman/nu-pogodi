@@ -9,8 +9,10 @@ const clamp=T.MathUtils.clamp, lerp=T.MathUtils.lerp, smooth=u=>{u=clamp(u,0,1);
 const canvas=$('game'), arena=$('arena');
 const platform=document.body.dataset.platform;
 const tvMode=platform==='tv';
-const seriesScreen=tvMode||platform==='web';
-const series=seriesScreen?(await import('./tv-series.js')).initSeries():null;
+const webMode=platform==='web';
+const seriesScreen=tvMode||webMode;
+const series=webMode?(await import('./web-series.js')).initWebSeries()
+  :tvMode?(await import('./tv-series.js')).initSeries():null;
 function showLoadingError(message){
   if($('loading-message'))window.dispatchEvent(new CustomEvent('penalty-load-error',{detail:message}));
   else $('loading').textContent=message;
@@ -27,14 +29,17 @@ try{renderer=new T.WebGLRenderer({canvas,antialias:!seriesScreen,alpha:false,pow
 renderer.setPixelRatio(Math.min(devicePixelRatio,seriesScreen?1:2));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
 renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
-const scene=new T.Scene();scene.background=new T.Color('#afc4b0');scene.fog=new T.Fog('#afc4b0',35,80);
+const scene=new T.Scene();
+const sceneColor=webMode?'#11191a':'#afc4b0';
+scene.background=new T.Color(sceneColor);
+scene.fog=new T.Fog(sceneColor,35,80);
 const camera=new T.PerspectiveCamera(40,1,.1,120);
 const cameraViews=[{p:V(0,1.8,-12),look:V(0,1.22,-6.5)},{p:V(2.2,1.9,-12),look:V(0,1.22,-6.5)},{p:V(-2.2,1.9,-12),look:V(0,1.22,-6.5)}];
 // From behind the goal, positive world X appears on the left of the screen.
 const screenDirection=()=>camera.position.z< -6.5?-1:1;
 let view=0;camera.position.copy(cameraViews[0].p);camera.lookAt(cameraViews[0].look);
-scene.add(new T.HemisphereLight('#fcf5df','#496e4c',2.6));
-const sun=new T.DirectionalLight('#fff1ca',3.7);sun.position.set(-12,19,10);sun.castShadow=true;
+scene.add(new T.HemisphereLight('#fcf5df','#496e4c',webMode?1.6:2.6));
+const sun=new T.DirectionalLight('#fff1ca',webMode?2.85:3.7);sun.position.set(-12,19,10);sun.castShadow=true;
 const shadowSize=seriesScreen?768:2048;
 sun.shadow.mapSize.set(shadowSize,shadowSize);Object.assign(sun.shadow.camera,{left:-17,right:17,top:20,bottom:-18,near:1,far:65});sun.shadow.normalBias=.035;sun.shadow.bias=-.0001;sun.shadow.radius=4;scene.add(sun);
 const mat=(color,extra={})=>new T.MeshStandardMaterial({color,roughness:.85,...extra});
@@ -42,7 +47,7 @@ const green=mat('#53795b'),darkGreen=mat('#456c52'),white=mat('#f0f0d4'),wood=ma
 function box(w,h,d,m,x,y,z){const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o;}
 function cylinder(a,b,r,m,parent=scene){a=Array.isArray(a)?V(...a):a;b=Array.isArray(b)?V(...b):b;const delta=b.clone().sub(a);const o=new T.Mesh(new T.CylinderGeometry(r,r,delta.length(),8),m);o.position.copy(a).add(b).multiplyScalar(.5);o.quaternion.setFromUnitVectors(V(0,1,0),delta.normalize());o.castShadow=true;parent.add(o);return o;}
 // A small neighbourhood ground, with broad mowing stripes and painted markings.
-box(23,.4,34,mat('#8ba37c'),0,-.31,0);
+box(webMode?125:23,.4,webMode?100:34,mat(webMode?'#3c4e25':'#8ba37c'),0,-.31,0);
 box(19,.13,29,green,0,-.055,0);
 for(let i=0;i<12;i++)box(18.9,.012,2.4,i%2?green:darkGreen,0,.018,-13.2+i*2.4);
 function line(points,color='#dae6c6',opacity=1){const o=new T.Line(new T.BufferGeometry().setFromPoints(points.map(p=>V(...p))),new T.LineBasicMaterial({color,transparent:opacity<1,opacity}));scene.add(o);return o;}
@@ -61,6 +66,13 @@ for(let x=-GW;x<=GW+.01;x+=.245)seg([x,GH,GZ],[x,GH,GZ-.5]);
 for(let z=GZ-.5;z<GZ;z+=.17)seg([-GW,GH,z],[GW,GH,z]);
 for(const x of [-GW,GW]){cylinder([x,.04,GZ-1.65],[x,GH,GZ-.5],.025,steel);cylinder([x,GH,GZ],[x,GH,GZ-.5],.025,steel);for(let y=.1;y<=GH;y+=.2)seg([x,y,GZ],[x,y,GZ-1.65+1.15*y/GH]);for(let i=0;i<=8;i++){const u=i/8;seg([x,.05,GZ-1.65*u],[x,GH,GZ-.5*u]);}}
 const netGeo=new T.BufferGeometry();netGeo.setAttribute('position',new T.Float32BufferAttribute(netPoints,3));const net=new T.LineSegments(netGeo,new T.LineBasicMaterial({color:'#eef4df',transparent:true,opacity:.16}));scene.add(net);
+if(webMode){
+  const texture=new T.TextureLoader().load('./assets/web-stadium.webp');
+  texture.colorSpace=T.SRGBColorSpace;
+  const stand=new T.Mesh(new T.PlaneGeometry(128,24),new T.MeshBasicMaterial({map:texture,side:T.DoubleSide,toneMapped:false,fog:false}));
+  stand.position.set(0,12,30);
+  scene.add(stand);
+}else{
 // Fences, low terraces, lamps, trees and small urban silhouettes.
 for(const x of [-10.3,10.3]){box(.16,.5,31,steel,x,.25,.3);for(let z=-14;z<=15;z+=2.5)cylinder([x,.3,z],[x,2.8,z],.035,steel);for(const y of [1,2,2.8])line([[x,y,-14],[x,y,15]],'#305b4b',.36);}
 // Keep the viewing corridor behind the goal clear; terraces sit at the far end.
@@ -75,6 +87,7 @@ for(let i=0;i<22;i++){const x=(i<12?-19+rand()*38:(i%2?-15:15)),z=i<12?-19-rand(
 for(let i=0;i<12;i++){const h=3+rand()*7;box(3+rand()*4,h,3,mat(['#849d88','#93a68f','#9aac99'][i%3]),-32+i*5.5,h/2,-33-rand()*8);}
 function sign(text,x,z){const c=document.createElement('canvas');c.width=1024;c.height=128;const ctx=c.getContext('2d');ctx.fillStyle='#244e40';ctx.fillRect(0,0,1024,128);ctx.fillStyle='#d8eda5';ctx.textAlign='center';ctx.font='bold 47px Arial';ctx.fillText(text,512,82);const tex=new T.CanvasTexture(c);tex.colorSpace=T.SRGBColorSpace;const o=new T.Mesh(new T.PlaneGeometry(5,.625),new T.MeshBasicMaterial({map:tex}));o.position.set(x,.65,z);scene.add(o);}
 sign('ОДИН НА ОДИН',-5.5,-9.5);sign('ТВОЙ ВЫХОД',5.5,-9.5);
+}
 const ball=new T.Mesh(new T.IcosahedronGeometry(BALL_RADIUS,3),mat('#f6f3da',{roughness:.6}));ball.castShadow=true;scene.add(ball);
 // Dark pentagons follow the twelve vertices of an icosahedron.
 const ico=new T.IcosahedronGeometry(1,0).getAttribute('position'),seen=[];
@@ -82,13 +95,14 @@ for(let i=0;i<ico.count;i++){const p=V().fromBufferAttribute(ico,i);if(seen.some
 const ballStart=V(.25,BALL_RADIUS+.005,4.45);ball.position.copy(ballStart);
 const halo=new T.Mesh(new T.RingGeometry(.52,.55,48),new T.MeshBasicMaterial({color:'#e9f5b1',transparent:true,opacity:.45,side:T.DoubleSide}));halo.rotation.x=-Math.PI/2;halo.position.set(.25,.045,4.45);scene.add(halo);
 const zoneLayer=$('target-layer');
-const zoneButtons=ZONES.map(zone=>{
+const zoneButtons=webMode?[]:ZONES.map(zone=>{
   const b=document.createElement('span');b.className='target-zone '+(zone.hands===1?'one-hand':'two-hands');
   b.innerHTML=`<strong>${zone.key}</strong><small>${zone.ru.toUpperCase()}</small>`;
   b.setAttribute('aria-label',`${zone.key} / ${zone.ru}: ${zone.label}, ${zone.hands===1?'одна рука':'прыжок двумя руками'}`);
   b.title=b.getAttribute('aria-label');zoneLayer.append(b);return b;
 });
 function updateZoneMarkers(){
+  if(webMode)return;
   const w=arena.clientWidth,h=arena.clientHeight;
   for(const zone of ZONES){const p=V(zone.x,zone.y,zone.z).project(camera),b=zoneButtons[zone.index];
     b.style.left=(p.x*.5+.5)*w+'px';b.style.top=(-p.y*.5+.5)*h+'px';
@@ -137,13 +151,28 @@ class Actor{
   }
   world(n){return V().setFromMatrixPosition(this.actual[clean(n)]).applyMatrix4(this.root.matrixWorld);}
 }
-let keeper,kicker,ready=false;
+let keeper,kicker,shirtNumber,ready=false;
 const state={phase:'ready',phaseTime:0,flightTime:0,whistleLead:1,saves:0,goals:0,attempts:0,keeperX:0,targetX:0,velocity:V(),jumpStart:-100,source:'manual',pose:null,poseAt:0,auto:false,nextAuto:0,shotTarget:null,shotZone:null,defense:null,outcome:null};
 let time=0,last=performance.now(),lastKeeperX=0;
 const shootButton=$('shoot'),result=$('result');
 function setLabel(s){$('state-label').textContent=s;}
 function score(){ $('saves').textContent=state.saves;$('goals').textContent=state.goals; }
-function resetBall(){state.phase='ready';state.phaseTime=0;state.flightTime=0;state.outcome=null;state.shotZone=null;state.defense=null;state.targetX=0;state.keeperX=0;lastKeeperX=0;state.pose=null;state.source='manual';state.jumpStart=-100;ball.position.copy(ballStart);ball.rotation.set(0,0,0);result.classList.remove('show');shootButton.disabled=!ready;halo.visible=true;setLabel('ГОТОВ К УДАРУ');$('control-hint').textContent='Исходная стойка по центру · только 12 клавиш';state.nextAuto=time+(series?5:2.1);series?.preview();}
+function updateShirtNumber(){
+  if(!shirtNumber)return;
+  const number=series.playerNumber;
+  shirtNumber.visible=number!==undefined;
+  if(number===undefined)return;
+  const texture=shirtNumber.material.map;
+  const ctx=texture.image.getContext('2d');
+  ctx.clearRect(0,0,128,128);
+  ctx.font='900 88px Arial';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillStyle='#1b1410';
+  ctx.fillText(String(number),64,66);
+  texture.needsUpdate=true;
+}
+function resetBall(){state.phase='ready';state.phaseTime=0;state.flightTime=0;state.outcome=null;state.shotZone=null;state.defense=null;state.targetX=0;state.keeperX=0;lastKeeperX=0;state.pose=null;state.source='manual';state.jumpStart=-100;ball.position.copy(ballStart);ball.rotation.set(0,0,0);result.classList.remove('show');shootButton.disabled=!ready;halo.visible=true;setLabel('ГОТОВ К УДАРУ');$('control-hint').textContent='Исходная стойка по центру · только 12 клавиш';state.nextAuto=time+(series?5:2.1);series?.preview();updateShirtNumber();}
 function shoot(target){
   if(!ready||state.phase!=='ready')return false;
   const zone=typeof target==='number'?ZONES[target]:!target?ZONES[Math.floor(Math.random()*ZONES.length)]:null;
@@ -162,7 +191,20 @@ function defend(index){
   canvas.focus({preventScroll:true});return true;
 }
 function release(){state.phase='flight';state.phaseTime=0;state.flightTime=0;sound('kick');const duration=.85;state.velocity.copy(state.shotTarget).sub(ballStart).divideScalar(duration);state.velocity.y=(state.shotTarget.y-ballStart.y+4.9*duration*duration)/duration;setLabel('ЛОВИ МОМЕНТ');}
-function finish(saved){if(state.outcome)return;state.outcome=saved?'save':'goal';if(saved){state.saves++;sound('save');sound('applause');}else{state.goals++;sound('net');sound('cheer');}score();$('result-title').textContent=saved?'ВОТ ЭТО СЕЙВ!':'ГОЛ!';$('result-sub').textContent=saved?'ВОРОТА ПОД ЗАЩИТОЙ':'СЛЕДУЮЩИЙ МЯЧ — ТВОЙ';result.classList.toggle('goal',!saved);result.classList.add('show');state.phase='result';state.phaseTime=0;setLabel(saved?'МЯЧ ОТБИТ':'МЯЧ В СЕТКЕ');if(series?.record(saved,state.shotZone,state.defense?.index))state.auto=false;}
+function finish(saved){
+  if(state.outcome)return;
+  state.outcome=saved?'save':'goal';
+  if(saved){state.saves++;sound('save');sound('applause');}
+  else{state.goals++;sound('net');sound('cheer');}
+  score();
+  $('result-title').textContent=saved?(webMode?'СЕЙВ!':'ВОТ ЭТО СЕЙВ!'):'ГОЛ!';
+  $('result-sub').textContent=saved?'ВОРОТА ПОД ЗАЩИТОЙ':'СЛЕДУЮЩИЙ МЯЧ — ТВОЙ';
+  result.classList.toggle('goal',!saved);
+  result.classList.add('show');
+  state.phase='result';state.phaseTime=0;
+  setLabel(saved?'МЯЧ ОТБИТ':'МЯЧ В СЕТКЕ');
+  if(series?.record(saved,state.shotZone,state.defense?.index)&&!webMode)state.auto=false;
+}
 function pointSegmentDistance(p,a,b){const ab=b.clone().sub(a),u=clamp(p.clone().sub(a).dot(ab)/ab.lengthSq(),0,1);return p.distanceTo(a.addScaledVector(ab,u));}
 function touchesKeeper(p){
   const pairs=[['upper.L','fore.L',.115],['fore.L','hand.L',.115],['upper.R','fore.R',.115],['fore.R','hand.R',.115],['thigh.L','shin.L',.14],['shin.L','foot.L',.11],['thigh.R','shin.R',.14],['shin.R','foot.R',.11]];
@@ -239,20 +281,41 @@ function update(dt){
       if(ball.position.z<GZ-1.5){ball.position.z=GZ-1.5;state.velocity.z=Math.abs(state.velocity.z)*.2;}
       ball.rotation.x+=state.velocity.z*step*3;ball.rotation.z-=state.velocity.x*step*3;
     }
-    if(state.phase==='result'&&state.phaseTime>2.5)resetBall();
+    if(state.phase==='result'&&state.phaseTime>2.5){
+      if(series?.complete)state.auto=false;
+      resetBall();
+    }
   }
   halo.material.opacity=.28+.12*Math.sin(time*3);
 }
 function fitGoalCamera(){
   camera.updateMatrixWorld(true);
   let tangent=0;
+  const playerPanel=webMode&&arena.clientWidth>720;
+  const goalWidth=playerPanel?.66:.96;
   // Fit the front posts almost to the side edges, retaining the whole goal on
   // wide screens too. Keep the camera itself at the keeper's head height.
   for(const x of [-GW-.07,GW+.07])for(const y of [0,GH+.07]){
     const p=V(x,y,GZ).applyMatrix4(camera.matrixWorldInverse);
-    tangent=Math.max(tangent,Math.abs(p.x)/(-p.z)/camera.aspect/.96,Math.abs(p.y)/(-p.z)/.92);
+    tangent=Math.max(tangent,Math.abs(p.x)/(-p.z)/camera.aspect/goalWidth,Math.abs(p.y)/(-p.z)/.92);
   }
-  camera.fov=T.MathUtils.radToDeg(2*Math.atan(tangent));camera.updateProjectionMatrix();
+  camera.fov=T.MathUtils.radToDeg(2*Math.atan(tangent));
+  camera.filmOffset=playerPanel?-.28*camera.getFilmWidth()*tangent*camera.aspect:0;
+  camera.updateProjectionMatrix();
+  if(webMode)placeGoalMap();
+}
+function placeGoalMap(){
+  const post=GW-.065, crossbar=GH-.065;
+  const corners=[V(post,crossbar,GZ),V(-post,crossbar,GZ),V(-post,.065,GZ),V(post,.065,GZ)]
+    .map(point=>{point.project(camera);return [(point.x+1)*50,(1-point.y)*50];});
+  const left=Math.min(...corners.map(point=>point[0]));
+  const top=Math.min(...corners.map(point=>point[1]));
+  const width=Math.max(...corners.map(point=>point[0]))-left;
+  const height=Math.max(...corners.map(point=>point[1]))-top;
+  const map=$('goal-map');
+  Object.assign(map.style,{left:`${left}%`,top:`${top}%`,width:`${width}%`,height:`${height}%`});
+  const polygon=corners.map(([x,y])=>`${(x-left)/width*100}% ${(y-top)/height*100}%`).join(',');
+  map.style.setProperty('--goal-shape',`polygon(${polygon})`);
 }
 function resize(){const w=arena.clientWidth,h=arena.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;fitGoalCamera();}
 new ResizeObserver(resize).observe(arena);resize();
@@ -318,6 +381,7 @@ window.penalty={
   defend,reset:resetGame,
   setMotionPose,stopMotion,pauseAuto,
   startAuto(){
+    if(webMode&&state.phase==='result')return;
     if(series?.complete)resetGame();
     if(tvMode&&audio.enabled)audio.unlock();
     state.auto=true;$('auto').checked=true;state.nextAuto=time+(series?5:1);
@@ -329,7 +393,18 @@ window.penalty={
 };
 try{
   const gltf=await new GLTFLoader().loadAsync('./assets/ball-man.glb');
-  keeper=new Actor(gltf.scene,'#f7efcf',.50);kicker=new Actor(gltf.scene,'#e7b078');
+  keeper=new Actor(gltf.scene,webMode?'#7eb9ad':'#f7efcf',webMode?.70:.50);
+  kicker=new Actor(gltf.scene,webMode?'#ff7930':'#e7b078');
+  if(webMode){
+    const numberCanvas=document.createElement('canvas');
+    numberCanvas.width=numberCanvas.height=128;
+    const texture=new T.CanvasTexture(numberCanvas);
+    shirtNumber=new T.Sprite(new T.SpriteMaterial({map:texture,toneMapped:false}));
+    shirtNumber.position.set(0,1.4,.25);
+    shirtNumber.scale.set(.28,.28,1);
+    kicker.root.add(shirtNumber);
+    updateShirtNumber();
+  }
   ready=true;keeperPose(0,1/60);kickerPose(0);$('loading').classList.add('hidden');shootButton.disabled=false;
   window.dispatchEvent(new Event('penalty-ready'));
   void connectPhone();

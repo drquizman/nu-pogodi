@@ -3,63 +3,89 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Один на один · Серия пенальти</title>
-  <link rel="stylesheet" href="./style.css?v=3f557d17d131">
-  <link rel="stylesheet" href="./tv.css?v=3f557d17d131">
+  <meta name="theme-color" content="#101a16">
+  <title>Один на один · ЧМ-2022</title>
+  <link rel="stylesheet" href="./style.css?v=398a00a42a52">
+  <link rel="stylesheet" href="./web.css?v=398a00a42a52">
 </head>
 <body data-platform="web">
-  <header>
-    <div class="brand"><span class="brand-mark">11</span><span>ОДИН НА ОДИН<span class="brand-sub">СЕРИЯ ПЕНАЛЬТИ</span></span></div>
-    <div class="header-right">
-      <span id="phone-status" role="status"></span>
-      <button id="connect-phone">Подключить телефон</button>
+  <header class="broadcast">
+    <div class="broadcast-brand"><span aria-hidden="true"></span>ОДИН НА ОДИН</div>
+    <div class="broadcast-match">ЧМ-2022 <b>·</b> ¼ ФИНАЛА</div>
+    <div class="broadcast-controls">
+      <strong id="series-step">Удар 1 / 5</strong>
+      <button id="connect-phone" aria-label="Подключить телефон" title="Подключить телефон">Телефон</button>
       <button id="sound" class="sound-button">♪ ВКЛ</button>
     </div>
   </header>
-  <main>
+  <main id="match-screen" class="match-screen" data-stage="scout">
+    <aside class="player-card" aria-labelledby="shooter">
+      <div id="shooter-portrait" class="player-portrait" aria-hidden="true"></div>
+      <div class="player-caption">
+        <span class="player-tag">Бьющий</span>
+        <h1 id="shooter"></h1>
+        <p><b id="shooter-number"></b> <span>· Нидерланды</span></p>
+      </div>
+    </aside>
+
     <section id="arena" class="arena" aria-label="Футбольное поле">
       <canvas id="game" aria-label="Ворота. Управление движениями рук через камеру телефона."></canvas>
-      <div id="target-layer" class="target-layer"></div>
+      <div id="target-layer" class="target-layer" aria-hidden="true"></div>
+      <div id="goal-map" class="goal-map" hidden>
+        <h2>Прошлые пенальти</h2>
+        <div id="goal-zones" class="goal-zones" aria-label="Направления ударов глазами вратаря">
+          <div><span>Слева</span><strong></strong><small></small></div>
+          <div><span>Центр</span><strong></strong><small></small></div>
+          <div><span>Справа</span><strong></strong><small></small></div>
+        </div>
+        <p id="goal-sample"></p>
+      </div>
       <div id="loading" class="loading" role="status">
         <span class="spinner" aria-hidden="true"></span>
         <span id="loading-message">Выходим на поле…</span>
         <button id="retry-game" class="glass-button" hidden>Попробовать снова</button>
       </div>
-      <div id="result" class="result" role="status"><span id="result-sub"></span><strong id="result-title"></strong></div>
+      <div id="result" class="result" role="status" aria-live="polite">
+        <span id="result-sub"></span><strong id="result-title"></strong>
+      </div>
       <div id="motion-setup" class="motion-setup" hidden>
         <p id="motion-status">Включи камеру на телефоне</p>
         <h2 id="motion-title">Покажи открытую ладонь</h2>
         <div class="palm-progress"><i id="palm-progress"></i></div>
         <div class="motion-instructions">
-          <span>Одна рука вбок — отбить</span>
-          <span>Две в одну сторону — прыгнуть</span>
-          <span>Руки вниз — стойка по центру</span>
+          <span>Одна рука вбок — отбить</span><span>Две в одну сторону — прыгнуть</span>
         </div>
-        <p class="height-hint">Кисти выше головы — верхний мяч · у пояса — нижний</p>
+        <p class="height-hint">Руки вниз — стойка по центру</p>
       </div>
-      <div class="arena-bottom"><span id="state-label">ГОТОВ К УДАРУ</span></div>
+      <div class="match-status">
+        <span id="phone-status"></span>
+        <span id="state-label">ГОТОВ К УДАРУ</span>
+      </div>
+      <div id="round-progress" aria-label="Твои результаты по ударам"></div>
     </section>
-    <aside class="scout">
-      <p class="eyebrow" id="series-step"></p>
-      <p id="series-context"></p>
-      <h1 id="shooter"></h1>
-      <p id="shooter-style"></p>
-      <div id="shot-map" aria-label="Игровые вероятности 12 зон ворот"></div>
-      <div id="scouting-directions" aria-label="Направления прошлых пенальти глазами вратаря" hidden>
-        <span>Слева<strong></strong></span>
-        <span>Центр<strong></strong></span>
-        <span>Справа<strong></strong></span>
+
+    <section id="final-score" class="final-score" aria-labelledby="final-title" hidden>
+      <p class="final-eyebrow">Сравнение с матчем</p>
+      <h2 id="final-title"></h2>
+      <div class="score-panels">
+        <section class="score-panel yours">
+          <p>Ты</p>
+          <strong id="player-score"></strong>
+          <small>Сейвы · игровая серия</small>
+          <div id="player-attempts" class="attempts" aria-label="Твои результаты"></div>
+        </section>
+        <section class="score-panel benchmark">
+          <div class="keeper-portrait" aria-hidden="true"></div>
+          <p>Мартинес</p>
+          <strong id="keeper-score"></strong>
+          <small>Сейвы · матч ЧМ-2022</small>
+          <div id="keeper-attempts" class="attempts" aria-label="Результаты Мартинеса в матче"></div>
+        </section>
       </div>
-      <small id="shot-map-caption">Игровой профиль · вид из ворот</small>
-      <p id="series-review" aria-live="polite"></p>
-      <div class="series-score">
-        <div id="series-attempts" aria-label="Результаты ударов"></div>
-        <div id="keeper-attempts" aria-label="Результаты ударов в матче" hidden></div>
-        <span id="keeper-tally" hidden></span>
-        <strong id="series-tally"></strong>
-        <small id="series-history"></small>
-      </div>
-    </aside>
+      <p id="best-score"></p>
+      <p class="replay-hint">Опусти руки, затем покажи ладонь на две секунды</p>
+    </section>
+
     <dialog id="phone-dialog">
       <h2>Встань на ворота</h2>
       <p>Отсканируй QR и включи камеру в браузере телефона. Поставь телефон рядом с экраном.</p>
@@ -70,7 +96,7 @@
       <button id="disconnect-phone" hidden>Отключить телефон</button>
     </dialog>
   </main>
-  <footer>Персонаж Ball Man · Redninjamp · CC BY 4.0</footer>
+  <footer>Нидерланды — Аргентина · 9 декабря 2022 <span>Ball Man · Redninjamp · CC BY 4.0</span></footer>
   <div hidden>
     <span id="saves"></span><span id="goals"></span><span id="control-hint"></span>
     <button id="shoot" disabled></button><input id="auto" type="checkbox">
@@ -114,6 +140,6 @@
   }, {once: true});
 })();
 </script>
-  <script id="game-entry" type="module" src="./game-3f557d17d131.js"></script>
+  <script id="game-entry" type="module" src="./game-398a00a42a52.js"></script>
 </body>
 </html>
