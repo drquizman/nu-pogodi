@@ -3,11 +3,16 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
 import { BALL_RADIUS, KEEPER_Z, ZONES, zoneForKey, canSaveShot, defenseWeight } from './zones.js';
 import { StadiumAudio, whistleLead, runupElapsed } from './sounds.js';
-import {initPhoneHost} from './phone-host.js?v=intent-gate-7';
 
 const $=id=>document.getElementById(id), V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
 const clamp=T.MathUtils.clamp, lerp=T.MathUtils.lerp, smooth=u=>{u=clamp(u,0,1);return u*u*(3-2*u);};
 const canvas=$('game'), arena=$('arena');
+const tvMode=document.body.dataset.platform==='tv';
+const series=tvMode?(await import('./tv-series.js')).initSeries():null;
+function showLoadingError(message){
+  if($('loading-message'))window.dispatchEvent(new CustomEvent('penalty-load-error',{detail:message}));
+  else $('loading').textContent=message;
+}
 const audio=new StadiumAudio(),soundEvents=[];
 try{audio.enabled=localStorage.getItem('penalty-sound-enabled')!=='false';}catch{}
 function sound(name){soundEvents.push({name,time,attempt:state.attempts});if(soundEvents.length>100)soundEvents.shift();audio.play(name);}
@@ -16,8 +21,8 @@ updateSoundButton();
 for(const event of ['pointerdown','keydown'])document.addEventListener(event,e=>{if(e.isTrusted)audio.unlock();},{capture:true});
 $('sound').addEventListener('click',()=>{audio.setEnabled(!audio.enabled);updateSoundButton();try{localStorage.setItem('penalty-sound-enabled',String(audio.enabled));}catch{}});
 let renderer;
-try{renderer=new T.WebGLRenderer({canvas,antialias:true,alpha:false,powerPreference:'high-performance'});}catch(error){$('loading').textContent='Для 3D нужен браузер с поддержкой WebGL. Попробуйте Chrome или Edge.';throw error;}
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+try{renderer=new T.WebGLRenderer({canvas,antialias:!tvMode,alpha:false,powerPreference:'high-performance'});}catch(error){showLoadingError(tvMode?'Для игры нужен Android System WebView с поддержкой WebGL 2.':'Полю нужен WebGL 2. Откройте игру в обновлённом браузере с включённым аппаратным ускорением.');throw error;}
+renderer.setPixelRatio(Math.min(devicePixelRatio,tvMode?1:2));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
 renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
 const scene=new T.Scene();scene.background=new T.Color('#afc4b0');scene.fog=new T.Fog('#afc4b0',35,80);
@@ -28,7 +33,8 @@ const screenDirection=()=>camera.position.z< -6.5?-1:1;
 let view=0;camera.position.copy(cameraViews[0].p);camera.lookAt(cameraViews[0].look);
 scene.add(new T.HemisphereLight('#fcf5df','#496e4c',2.6));
 const sun=new T.DirectionalLight('#fff1ca',3.7);sun.position.set(-12,19,10);sun.castShadow=true;
-sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-17,right:17,top:20,bottom:-18,near:1,far:65});sun.shadow.normalBias=.035;sun.shadow.bias=-.0001;sun.shadow.radius=4;scene.add(sun);
+const shadowSize=tvMode?768:2048;
+sun.shadow.mapSize.set(shadowSize,shadowSize);Object.assign(sun.shadow.camera,{left:-17,right:17,top:20,bottom:-18,near:1,far:65});sun.shadow.normalBias=.035;sun.shadow.bias=-.0001;sun.shadow.radius=4;scene.add(sun);
 const mat=(color,extra={})=>new T.MeshStandardMaterial({color,roughness:.85,...extra});
 const green=mat('#53795b'),darkGreen=mat('#456c52'),white=mat('#f0f0d4'),wood=mat('#c6a46f'),steel=mat('#284d45'),chalk=mat('#c8dbb3');
 function box(w,h,d,m,x,y,z){const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o;}
@@ -84,7 +90,7 @@ function updateZoneMarkers(){
   const w=arena.clientWidth,h=arena.clientHeight;
   for(const zone of ZONES){const p=V(zone.x,zone.y,zone.z).project(camera),b=zoneButtons[zone.index];
     b.style.left=(p.x*.5+.5)*w+'px';b.style.top=(-p.y*.5+.5)*h+'px';
-    b.classList.toggle('incoming',state.shotZone===zone.index&&['runup','flight'].includes(state.phase));
+    b.classList.toggle('incoming',!series&&state.shotZone===zone.index&&['runup','flight'].includes(state.phase));
     b.classList.toggle('defending',state.defense?.index===zone.index);
   }
 }
@@ -135,12 +141,13 @@ let time=0,last=performance.now(),lastKeeperX=0;
 const shootButton=$('shoot'),result=$('result');
 function setLabel(s){$('state-label').textContent=s;}
 function score(){ $('saves').textContent=state.saves;$('goals').textContent=state.goals; }
-function resetBall(){state.phase='ready';state.phaseTime=0;state.flightTime=0;state.outcome=null;state.shotZone=null;state.defense=null;state.targetX=0;state.keeperX=0;lastKeeperX=0;state.pose=null;state.source='manual';state.jumpStart=-100;ball.position.copy(ballStart);ball.rotation.set(0,0,0);result.classList.remove('show');shootButton.disabled=!ready;halo.visible=true;setLabel('ГОТОВ К УДАРУ');$('control-hint').textContent='Исходная стойка по центру · только 12 клавиш';state.nextAuto=time+2.1;}
+function resetBall(){state.phase='ready';state.phaseTime=0;state.flightTime=0;state.outcome=null;state.shotZone=null;state.defense=null;state.targetX=0;state.keeperX=0;lastKeeperX=0;state.pose=null;state.source='manual';state.jumpStart=-100;ball.position.copy(ballStart);ball.rotation.set(0,0,0);result.classList.remove('show');shootButton.disabled=!ready;halo.visible=true;setLabel('ГОТОВ К УДАРУ');$('control-hint').textContent='Исходная стойка по центру · только 12 клавиш';state.nextAuto=time+(series?5:2.1);series?.preview();}
 function shoot(target){
   if(!ready||state.phase!=='ready')return false;
   const zone=typeof target==='number'?ZONES[target]:!target?ZONES[Math.floor(Math.random()*ZONES.length)]:null;
   if(!zone&&(!target||!Number.isFinite(target.x)||!Number.isFinite(target.y)))return false;
   state.phase='runup';state.phaseTime=0;state.attempts++;state.shotZone=zone?.index??null;
+  series?.kick();
   state.whistleLead=whistleLead();sound('whistle');
   state.shotTarget=zone?V(zone.x,zone.y,zone.z):V(clamp(target.x,-3.15,3.15),clamp(target.y,BALL_RADIUS+.01,GH-BALL_RADIUS-.01),KEEPER_Z);
   result.classList.remove('show');shootButton.disabled=true;halo.visible=false;setLabel('СВИСТОК · ПРИГОТОВЬСЯ');return true;
@@ -153,7 +160,7 @@ function defend(index){
   canvas.focus({preventScroll:true});return true;
 }
 function release(){state.phase='flight';state.phaseTime=0;state.flightTime=0;sound('kick');const duration=.85;state.velocity.copy(state.shotTarget).sub(ballStart).divideScalar(duration);state.velocity.y=(state.shotTarget.y-ballStart.y+4.9*duration*duration)/duration;setLabel('ЛОВИ МОМЕНТ');}
-function finish(saved){if(state.outcome)return;state.outcome=saved?'save':'goal';if(saved){state.saves++;sound('save');sound('applause');}else{state.goals++;sound('net');sound('cheer');}score();$('result-title').textContent=saved?'ВОТ ЭТО СЕЙВ!':'ГОЛ!';$('result-sub').textContent=saved?'ВОРОТА ПОД ЗАЩИТОЙ':'СЛЕДУЮЩИЙ МЯЧ — ТВОЙ';result.classList.toggle('goal',!saved);result.classList.add('show');state.phase='result';state.phaseTime=0;setLabel(saved?'МЯЧ ОТБИТ':'МЯЧ В СЕТКЕ');}
+function finish(saved){if(state.outcome)return;state.outcome=saved?'save':'goal';if(saved){state.saves++;sound('save');sound('applause');}else{state.goals++;sound('net');sound('cheer');}score();$('result-title').textContent=saved?'ВОТ ЭТО СЕЙВ!':'ГОЛ!';$('result-sub').textContent=saved?'ВОРОТА ПОД ЗАЩИТОЙ':'СЛЕДУЮЩИЙ МЯЧ — ТВОЙ';result.classList.toggle('goal',!saved);result.classList.add('show');state.phase='result';state.phaseTime=0;setLabel(saved?'МЯЧ ОТБИТ':'МЯЧ В СЕТКЕ');if(series?.record(saved,state.shotZone,state.defense?.index))state.auto=false;}
 function pointSegmentDistance(p,a,b){const ab=b.clone().sub(a),u=clamp(p.clone().sub(a).dot(ab)/ab.lengthSq(),0,1);return p.distanceTo(a.addScaledVector(ab,u));}
 function touchesKeeper(p){
   const pairs=[['upper.L','fore.L',.115],['fore.L','hand.L',.115],['upper.R','fore.R',.115],['fore.R','hand.R',.115],['thigh.L','shin.L',.14],['shin.L','foot.L',.11],['thigh.R','shin.R',.14],['shin.R','foot.R',.11]];
@@ -218,7 +225,7 @@ function kickerPose(t){
 function update(dt){
   time+=dt;if(!ready)return;
   state.phaseTime+=dt;keeperPose(time,dt);kickerPose(time);
-  if(state.phase==='ready'&&state.auto&&time>=state.nextAuto)shoot();
+  if(state.phase==='ready'&&state.auto&&time>=state.nextAuto)shoot(series?.nextShot());
   if(state.phase==='runup'&&state.phaseTime>=state.whistleLead)release();
   if(state.phase==='flight'||state.phase==='result'){
     for(let remaining=dt;remaining>0;){const step=Math.min(remaining,1/180);remaining-=step;state.flightTime+=step;ball.position.addScaledVector(state.velocity,step);state.velocity.y-=9.8*step;
@@ -247,11 +254,22 @@ function fitGoalCamera(){
 }
 function resize(){const w=arena.clientWidth,h=arena.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;fitGoalCamera();}
 new ResizeObserver(resize).observe(arena);resize();
-function frame(now){const dt=Math.min((now-last)/1000,.05);last=now;update(dt);updateZoneMarkers();renderer.render(scene,camera);requestAnimationFrame(frame);}
+function frame(now){const dt=Math.min((now-last)/1000,tvMode?.12:.05);last=now;update(dt);updateZoneMarkers();renderer.render(scene,camera);requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 document.addEventListener('visibilitychange',()=>{last=performance.now();releaseControls();if(document.hidden)audio.stop();});
 canvas.addEventListener('pointerdown',()=>canvas.focus({preventScroll:true}));
 window.addEventListener('keydown',e=>{
+  if(tvMode){
+    if(!$('phone-dialog').open&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+      e.preventDefault();
+      const buttons=[...document.querySelectorAll('.header-right button:not(:disabled)')];
+      const current=buttons.indexOf(document.activeElement);
+      const direction=['ArrowLeft','ArrowUp'].includes(e.key)?-1:1;
+      const next=current<0?0:(current+direction+buttons.length)%buttons.length;
+      buttons[next]?.focus();
+    }
+    return;
+  }
   if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName)||document.activeElement?.isContentEditable)return;
   const zone=zoneForKey(e);
   if(zone){e.preventDefault();if(!e.repeat)defend(zone.index);return;}
@@ -263,7 +281,7 @@ window.addEventListener('keyup',e=>{const zone=zoneForKey(e);if(zone&&state.defe
 function releaseControls(){if(state.defense)state.defense.releaseAt=time;}
 window.addEventListener('blur',releaseControls);
 shootButton.addEventListener('click',()=>shoot());$('auto').addEventListener('change',e=>{state.auto=e.target.checked;state.nextAuto=time+1;});
-function resetGame(){audio.stop();state.saves=0;state.goals=0;state.attempts=0;score();state.targetX=0;state.keeperX=0;lastKeeperX=0;state.jumpStart=-100;state.pose=null;state.source='manual';$('control-hint').textContent='12 клавиш = 12 точек в воротах';resetBall();}
+function resetGame(){audio.stop();state.saves=0;state.goals=0;state.attempts=0;score();state.targetX=0;state.keeperX=0;lastKeeperX=0;state.jumpStart=-100;state.pose=null;state.source='manual';$('control-hint').textContent='12 клавиш = 12 точек в воротах';series?.restart();resetBall();}
 function pauseAuto(){state.auto=false;$('auto').checked=false;if(['runup','flight'].includes(state.phase)){audio.stop();resetBall();}}
 function stopMotion(){if(state.source!=='motion')return;state.pose=null;state.defense=null;state.targetX=0;state.source='manual';pauseAuto();}
 function setMotionPose(pose){
@@ -276,6 +294,11 @@ function setMotionPose(pose){
   $('control-hint').textContent=pose.zone===null?'Вратарь повторяет движения рук':`Камера · ${ZONES[pose.zone].ru.toUpperCase()} · ${ZONES[pose.zone].hands===1?'одна рука':'прыжок двумя руками'}`;return true;
 }
 $('reset').addEventListener('click',resetGame);
+$('series-mode')?.addEventListener('click',()=>{
+  pauseAuto();
+  series.switchMode();
+  resetGame();
+});
 $('view').addEventListener('click',()=>{view=(view+1)%cameraViews.length;camera.position.copy(cameraViews[view].p);camera.lookAt(cameraViews[view].look);fitGoalCamera();});
 $('fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{setLabel('ПОЛНОЭКРАННЫЙ РЕЖИМ НЕДОСТУПЕН');}});
 // Transport-independent boundary for the later phone / pose-tracking connection.
@@ -292,19 +315,36 @@ window.penalty={
   disconnectPose(){state.pose=null;state.targetX=0;state.source='manual';$('control-hint').textContent='Исходная стойка по центру · только 12 клавиш';},
   defend,reset:resetGame,
   setMotionPose,stopMotion,pauseAuto,
-  startAuto(){state.auto=true;$('auto').checked=true;state.nextAuto=time+1;},
+  startAuto(){
+    if(series?.complete)resetGame();
+    if(tvMode&&audio.enabled)audio.unlock();
+    state.auto=true;$('auto').checked=true;state.nextAuto=time+(series?5:1);
+  },
   getZones:()=>structuredClone(ZONES),
   shoot:target=>shoot(target),
   getSoundState:()=>({enabled:audio.enabled,context:audio.context?.state??'locked',events:structuredClone(soundEvents)}),
-  getState:()=>({ready,auto:state.auto,phase:state.phase,whistleLead:state.whistleLead,saves:state.saves,goals:state.goals,attempts:state.attempts,keeperX:state.keeperX,input:state.source,ball:ball.position.toArray(),ballRadius:BALL_RADIUS,shotZone:state.shotZone,defense:state.defense?{index:state.defense.index,hands:ZONES[state.defense.index].hands}:null,outcome:state.outcome}),
+  getState:()=>({ready,auto:state.auto,phase:state.phase,whistleLead:state.whistleLead,saves:state.saves,goals:state.goals,attempts:state.attempts,keeperX:state.keeperX,input:state.source,ball:ball.position.toArray(),ballRadius:BALL_RADIUS,shotZone:state.shotZone,defense:state.defense?{index:state.defense.index,hands:ZONES[state.defense.index].hands}:null,outcome:state.outcome,seriesComplete:series?.complete??false}),
 };
 try{
   const gltf=await new GLTFLoader().loadAsync('./assets/ball-man.glb');
   keeper=new Actor(gltf.scene,'#f7efcf',.50);kicker=new Actor(gltf.scene,'#e7b078');
   ready=true;keeperPose(0,1/60);kickerPose(0);$('loading').classList.add('hidden');shootButton.disabled=false;
-  initPhoneHost();
   window.dispatchEvent(new Event('penalty-ready'));
-}catch(error){console.error(error);$('loading').replaceChildren(document.createTextNode('Не удалось загрузить персонажей. Обновите страницу или запустите её через Запустить.bat.'));}
+  void connectPhone();
+}catch(error){console.error(error);showLoadingError('Не удалось загрузить 3D-персонажей. Проверьте соединение и попробуйте снова.');}
+
+async function connectPhone(){
+  try {
+    const {initPhoneHost}=await import('./phone-host.js?v=intent-gate-7');
+    initPhoneHost(tvMode?{phoneBase:'https://drquizman.github.io/nu-pogodi/penalty/'}:undefined);
+  } catch(error) {
+    console.error(error);
+    if(!tvMode)document.body.dataset.controls='keyboard';
+    $('phone-status').textContent='Не удалось запустить подключение камеры. Попробуйте ещё раз.';
+    $('phone-status').classList.add('connection-error');
+    $('connect-phone').onclick=()=>void connectPhone();
+  }
+}
 
 
 

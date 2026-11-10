@@ -5,12 +5,12 @@ export const cloud=createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSes
 let login;
 export function ensureSession(){return login??=(async()=>{const {error}=await cloud.auth.signInAnonymously();if(error)throw error;})().catch(e=>{login=null;throw e;});}
 export function controllerURL(id,key,base=location.href){const u=new URL('./phone.html',base);u.search='?v=intent-gate-7';u.hash=new URLSearchParams({room:id,key}).toString();return u.href;}
-async function seatInfo(seat){const phoneURL=controllerURL(seat.id,seat.joinKey);return {...seat,phoneURL,qr:await toDataURL(phoneURL,{width:300,margin:2,errorCorrectionLevel:'M'})};}
-export async function createSeat(){await ensureSession();const {data,error}=await cloud.rpc('np_create_room');if(error)throw error;return seatInfo(data);}
-export async function resumeSeat(seat){
+async function seatInfo(seat,base){const phoneURL=controllerURL(seat.id,seat.joinKey,base);return {...seat,phoneURL,qr:await toDataURL(phoneURL,{width:300,margin:2,errorCorrectionLevel:'M'})};}
+export async function createSeat(base){await ensureSession();const {data,error}=await cloud.rpc('np_create_room');if(error)throw error;return seatInfo(data,base);}
+export async function resumeSeat(seat,base){
   if(!seat?.id||!seat.hostKey||!seat.joinKey)throw Error('Подключение устарело');
   await ensureSession();const {data,error}=await cloud.rpc('np_join_room',{room_id:seat.id,player_role:'host',room_key:seat.hostKey});
-  if(error)throw error;if(!data)throw Error('Подключение устарело');return seatInfo(seat);
+  if(error)throw error;if(!data)throw Error('Подключение устарело');return seatInfo(seat,base);
 }
 const validHand=h=>h&&['x','y','z'].every(k=>Number.isFinite(h[k]))&&Math.abs(h.x)<=1.2&&h.y>=.2&&h.y<=2.4&&Math.abs(h.z)<=.8;
 export function validMessage(role,m){

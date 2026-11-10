@@ -1,17 +1,18 @@
 import {PhoneConnection} from './phone-connection.js?v=intent-gate-7';
 import {createSeat,resumeSeat} from './cloud.js?v=intent-gate-7';
 import {IntentionalStart,START_PROTOCOL} from './palm.js?v=intent-gate-7';
-export function initPhoneHost(){
+export function initPhoneHost({phoneBase}={}){
   const $=id=>document.getElementById(id),button=$('connect-phone'),dialog=$('phone-dialog'),panel=$('motion-setup');
   let seat,connection,phone=false,lastPose=0,lastState='',lastSent=0,busy=false,generation=0,mode='phone',tracked=false,startPhase='lower';
   const starter=new IntentionalStart();
   function text(s){$('phone-status').textContent=s;$('pair-message').textContent=s;$('motion-status').textContent=s;}
   function layout(){
     document.body.dataset.controls=mode;
-    panel.hidden=mode!=='phone'||dialog.open||window.penalty.getState().auto;
+    const state=window.penalty.getState();
+    panel.hidden=mode!=='phone'||dialog.open||state.auto||state.seriesComplete;
     $('motion-title').innerHTML=tracked?(startPhase==='lower'?'Сначала опусти обе руки':startPhase==='show'?'Подними одну ладонь к лицу<br>вторую руку оставь внизу':'Держи ладонь неподвижно<br>2 секунды'):'Встань в кадр<br>покажи пояс и обе кисти';
   }
-  function lost(s){starter.reset();startPhase='lower';tracked=false;lastPose=0;$('palm-progress').style.width='0%';window.penalty.stopMotion();text(s);layout();}
+  function lost(s){starter.reset();startPhase='lower';tracked=false;lastPose=0;$('palm-progress').style.width='0%';window.penalty.stopMotion();if(phoneBase)window.penalty.pauseAuto();text(s);layout();}
   function showSeat(){
     $('phone-qr').src=seat.qr;$('phone-qr').hidden=false;$('phone-link').href=seat.phoneURL;$('phone-link').hidden=false;
   }
@@ -27,6 +28,7 @@ export function initPhoneHost(){
       }
       if(m.type==='pose'){
         lastPose=performance.now();tracked=m.tracked;window.penalty.setMotionPose(m);
+        if(phoneBase&&!tracked)window.penalty.pauseAuto();
         text(tracked?'Камера видит тебя':m.guide||'Покажи пояс и обе кисти');
         const hold=starter.update({neutral:m.startNeutral===true,gesture:m.startGesture===true,anchor:m.startAnchor},m.startProtocol===START_PROTOCOL&&m.tracked&&!m.held&&!window.penalty.getState().auto,performance.now());
         startPhase=hold.phase;$('palm-progress').style.width=`${Math.round(hold.progress*100)}%`;
@@ -37,17 +39,22 @@ export function initPhoneHost(){
       if(m.type==='action'&&m.action==='pause'){window.penalty.pauseAuto();layout();}
     },online=>{if(current===generation&&!online)lost('Связь потеряна · переподключаемся');});
   }
-  async function pair(){
+  async function pair(fresh=false){
     if(busy)return;busy=true;window.penalty.pauseAuto();const current=++generation;mode='phone';button.disabled=true;
+    if(fresh){
+      const old=connection;connection=null;void old?.send({type:'closed'}).finally(()=>old.close());
+      phone=false;lastPose=0;tracked=false;starter.reset();
+      startPhase='lower';$('palm-progress').style.width='0%';$('phone-qr').hidden=true;$('phone-link').hidden=true;
+    }
     if(!dialog.open)dialog.showModal();layout();text('Готовим QR-код…');
     try{
-      let saved;try{saved=JSON.parse(sessionStorage.getItem('penalty-cloud-room'));}catch{}
-      let next;if(saved)try{next=await resumeSeat(saved);}catch{}
-      if(!next)next=await createSeat();
+      let saved;try{if(!fresh)saved=JSON.parse(sessionStorage.getItem('penalty-cloud-room'));}catch{}
+      let next;if(saved)try{next=await resumeSeat(saved,phoneBase);}catch{}
+      if(!next)next=await createSeat(phoneBase);
       if(current!==generation)return;seat=next;
       try{sessionStorage.setItem('penalty-cloud-room',JSON.stringify({id:seat.id,hostKey:seat.hostKey,joinKey:seat.joinKey}));}catch{}
       showSeat();connect(current);text('');
-    }catch{if(current===generation)text('Не удалось получить QR-код. Проверь интернет или выбери клавиатуру');}
+    }catch{if(current===generation)text(phoneBase?'Не удалось получить QR-код. Проверь интернет и обнови QR':'Не удалось получить QR-код. Проверь интернет или выбери клавиатуру');}
     finally{busy=false;button.disabled=false;}
   }
   function keyboard(){
@@ -55,8 +62,8 @@ export function initPhoneHost(){
     const old=connection;connection=null;void old?.send({type:'closed'}).finally(()=>old.close());
     window.penalty.stopMotion();if(dialog.open)dialog.close();text('');layout();
   }
-  button.onclick=()=>void pair();$('close-phone-dialog').onclick=keyboard;$('disconnect-phone').onclick=keyboard;
-  dialog.addEventListener('cancel',e=>{e.preventDefault();keyboard();});
+  button.onclick=()=>void pair(Boolean(phoneBase));$('close-phone-dialog').onclick=phoneBase?()=>void pair(true):keyboard;$('disconnect-phone').onclick=keyboard;
+  dialog.addEventListener('cancel',e=>{e.preventDefault();if(!phoneBase)keyboard();});
   setInterval(()=>{
     if(mode!=='phone')return;
     if(phone&&lastPose&&performance.now()-lastPose>1600)lost('Камера потеряла тебя · вернись в кадр');

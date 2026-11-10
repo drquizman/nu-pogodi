@@ -5,8 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#102822">
   <title>Один на один — пенальти</title>
-  <link rel="stylesheet" href="./style.css?v=intent-gate-7">
-  <script type="importmap">{"imports":{"three":"./vendor/three/three.module.js","three/addons/":"./vendor/three/addons/"}}</script>
+  <link rel="stylesheet" href="./style.css?v=aea33b2e39e8">
 </head>
 <body>
   <header>
@@ -19,7 +18,11 @@
       <canvas id="game" tabindex="0" aria-label="Поле. QWER, ASDF, ZXCV или ЙЦУК, ФЫВА, ЯЧСМ — 12 точек защиты. Пробел — удар"></canvas>
       <div id="target-layer" class="target-layer" aria-label="12 точек в воротах"></div>
       <div class="arena-top"><div class="venue"><span class="live-dot"></span> ДВОР № 11<span>Вечерняя тренировка</span></div><div class="scoreboard"><div><span>СЕЙВЫ</span><strong id="saves">0</strong></div><b>:</b><div><span>ГОЛЫ</span><strong id="goals">0</strong></div></div><button id="view" class="glass-button" title="Переключить камеру">↻ <span>Ракурс</span></button></div>
-      <div id="loading" class="loading"><span class="spinner"></span><span>Выходим на поле…</span></div>
+      <div id="loading" class="loading" role="status">
+        <span class="spinner" aria-hidden="true"></span>
+        <span id="loading-message">Выходим на поле…</span>
+        <button id="retry-game" class="glass-button" hidden>Попробовать снова</button>
+      </div>
       <div id="result" class="result" role="status" aria-live="polite"><span id="result-sub"></span><strong id="result-title"></strong></div>
       <div id="motion-setup" class="motion-setup" hidden><p id="motion-status">Включи камеру на телефоне</p><h2 id="motion-title">Покажи открытую ладонь<br>в камеру на 2 секунды</h2><div class="palm-progress"><i id="palm-progress"></i></div><div class="motion-instructions"><span>Одна рука вбок — отбить</span><span>Две в одну сторону — прыгнуть</span><span>Руки вниз — стойка по центру</span></div><p class="height-hint">Тянись выше — верхний мяч · вбок — средний · вбок и вниз — нижний</p></div>
       <div class="arena-bottom"><span class="scene-tag"><i></i> BALL MAN · 2 ИГРОКА</span><span id="state-label">ГОТОВ К УДАРУ</span><span class="scene-tag">11 МЕТРОВ ДО СЛАВЫ</span></div>
@@ -36,7 +39,45 @@
     <dialog id="phone-dialog"><h2>Встань на ворота</h2><p>Отсканируй QR-код и включи камеру на телефоне</p><img id="phone-qr" width="300" height="300" alt="QR-код подключения телефона" hidden><a id="phone-link" target="_blank" rel="noreferrer" hidden>Открыть камеру ↗</a><p id="pair-message" role="status">Готовим подключение…</p><button id="close-phone-dialog" class="keyboard-choice">Играть на клавиатуре</button><button id="disconnect-phone" hidden>Отключить телефон</button></dialog>
   </main>
   <footer><span>Маленькое поле. Большой момент.</span><span>Персонаж <a href="https://sketchfab.com/3d-models/ball-man-free-rigged-base-mesh-uvs-a3372cd5fe744f17ac5c83e08a8fc41c" target="_blank" rel="noreferrer">Ball Man — Redninjamp</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">CC BY 4.0</a></span></footer>
-  <script type="module" src="./game.js?v=intent-gate-7"></script>
+  <script>
+    (function () {
+      var loading = document.getElementById('loading');
+      var label = document.getElementById('loading-message');
+      var retry = document.getElementById('retry-game');
+      var fromFile = location.protocol === 'file:';
+      var timer = setTimeout(function () {
+        fail('Поле загружается дольше обычного. Проверьте соединение и попробуйте снова.');
+      }, 20000);
+
+      function fail(message) {
+        if (loading.hidden || loading.classList.contains('hidden')) return;
+        if (!retry.hidden && !message) return;
+        clearTimeout(timer);
+        loading.classList.add('load-failed');
+        loading.querySelector('.spinner').hidden = true;
+        label.textContent = message || 'Не удалось загрузить игру. Обновите страницу и попробуйте снова.';
+        retry.hidden = false;
+      }
+
+      if (fromFile) {
+        retry.textContent = 'Открыть игру в интернете';
+        fail('Для запуска откройте веб-версию игры.');
+      }
+      retry.addEventListener('click', function () {
+        if (fromFile) location.href = 'https://drquizman.github.io/nu-pogodi/penalty/';
+        else location.reload();
+      });
+      window.addEventListener('error', function (event) {
+        if (!fromFile && (event.error || (event.target && event.target.id === 'game-entry'))) fail();
+      }, true);
+      window.addEventListener('penalty-load-error', function (event) { fail(event.detail); });
+      window.addEventListener('penalty-ready', function () {
+        clearTimeout(timer);
+        loading.hidden = true;
+      }, {once: true});
+    })();
+  </script>
+  <script id="game-entry" type="module" src="./game-aea33b2e39e8.js"></script>
 </body>
 </html>
 
