@@ -155,8 +155,18 @@ let keeper,kicker,shirtNumber,ready=false;
 const state={phase:'ready',phaseTime:0,flightTime:0,whistleLead:1,saves:0,goals:0,attempts:0,keeperX:0,targetX:0,velocity:V(),jumpStart:-100,source:'manual',pose:null,poseAt:0,auto:false,nextAuto:0,shotTarget:null,shotZone:null,defense:null,outcome:null};
 let time=0,last=performance.now(),lastKeeperX=0;
 const shootButton=$('shoot'),result=$('result');
+const shotMarker=$('shot-marker');
 function setLabel(s){$('state-label').textContent=s;}
 function score(){ $('saves').textContent=state.saves;$('goals').textContent=state.goals; }
+function updateShotMarker(){
+  if(!shotMarker)return;
+  shotMarker.hidden=state.phase==='ready'||!state.shotTarget;
+  if(shotMarker.hidden)return;
+  const point=state.shotTarget.clone().project(camera);
+  shotMarker.style.left=`${(point.x+1)*50}%`;
+  shotMarker.style.top=`${(1-point.y)*50}%`;
+  shotMarker.dataset.outcome=state.outcome??'';
+}
 function updateShirtNumber(){
   if(!shirtNumber)return;
   const number=series.playerNumber;
@@ -172,7 +182,7 @@ function updateShirtNumber(){
   ctx.fillText(String(number),64,66);
   texture.needsUpdate=true;
 }
-function resetBall(){state.phase='ready';state.phaseTime=0;state.flightTime=0;state.outcome=null;state.shotZone=null;state.defense=null;state.targetX=0;state.keeperX=0;lastKeeperX=0;state.pose=null;state.source='manual';state.jumpStart=-100;ball.position.copy(ballStart);ball.rotation.set(0,0,0);result.classList.remove('show');shootButton.disabled=!ready;halo.visible=true;setLabel('ГОТОВ К УДАРУ');$('control-hint').textContent='Исходная стойка по центру · только 12 клавиш';state.nextAuto=time+(series?5:2.1);series?.preview();updateShirtNumber();}
+function resetBall(){state.phase='ready';state.phaseTime=0;state.flightTime=0;state.outcome=null;state.shotZone=null;state.defense=null;state.targetX=0;state.keeperX=0;lastKeeperX=0;state.pose=null;state.source='manual';state.jumpStart=-100;ball.position.copy(ballStart);ball.rotation.set(0,0,0);result.classList.remove('show');shootButton.disabled=!ready;halo.visible=true;setLabel('ГОТОВ К УДАРУ');$('control-hint').textContent='Исходная стойка по центру · только 12 клавиш';state.nextAuto=time+(series?5:2.1);updateShotMarker();series?.preview();updateShirtNumber();}
 function shoot(target){
   if(!ready||state.phase!=='ready')return false;
   const zone=typeof target==='number'?ZONES[target]:!target?ZONES[Math.floor(Math.random()*ZONES.length)]:null;
@@ -181,6 +191,7 @@ function shoot(target){
   series?.kick();
   state.whistleLead=whistleLead();sound('whistle');
   state.shotTarget=zone?V(zone.x,zone.y,zone.z):V(clamp(target.x,-3.15,3.15),clamp(target.y,BALL_RADIUS+.01,GH-BALL_RADIUS-.01),KEEPER_Z);
+  updateShotMarker();
   result.classList.remove('show');shootButton.disabled=true;halo.visible=false;setLabel('СВИСТОК · ПРИГОТОВЬСЯ');return true;
 }
 function defend(index){
@@ -202,6 +213,7 @@ function finish(saved){
   result.classList.toggle('goal',!saved);
   result.classList.add('show');
   state.phase='result';state.phaseTime=0;
+  updateShotMarker();
   setLabel(saved?'МЯЧ ОТБИТ':'МЯЧ В СЕТКЕ');
   if(series?.record(saved,state.shotZone,state.defense?.index)&&!webMode)state.auto=false;
 }
@@ -302,7 +314,10 @@ function fitGoalCamera(){
   camera.fov=T.MathUtils.radToDeg(2*Math.atan(tangent));
   camera.filmOffset=playerPanel?-.28*camera.getFilmWidth()*tangent*camera.aspect:0;
   camera.updateProjectionMatrix();
-  if(webMode)placeGoalMap();
+  if(webMode){
+    placeGoalMap();
+    updateShotMarker();
+  }
 }
 function placeGoalMap(){
   const post=GW-.065, crossbar=GH-.065;

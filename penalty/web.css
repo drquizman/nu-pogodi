@@ -146,6 +146,28 @@
 .goal-zones span { text-transform:uppercase; letter-spacing:.055em; }
 .goal-zones strong { font-size:clamp(22px,4.8vw,88px); font-weight:900; letter-spacing:-.065em; line-height:1.03; }
 .goal-zones small { font-size:.75em; }
+[data-platform="web"] .target-layer { z-index:2; }
+.shot-marker {
+  --marker-color:var(--lime);
+  position:absolute;
+  display:grid;
+  place-items:center;
+  width:clamp(28px,4vw,58px);
+  aspect-ratio:1;
+  transform:translate(-50%,-50%);
+  border:3px solid var(--marker-color);
+  border-radius:50%;
+  box-shadow:0 0 0 2px #0b1614d9,0 0 18px #cbff588a;
+}
+.shot-marker::after {
+  content:"";
+  width:22%;
+  aspect-ratio:1;
+  border-radius:50%;
+  background:var(--marker-color);
+  box-shadow:0 0 0 1px #0b1614;
+}
+.shot-marker[data-outcome="goal"] { --marker-color:#ffab6b; box-shadow:0 0 0 2px #0b1614d9; }
 [data-platform="web"] .result { z-index:3; left:64%; top:13%; text-transform:uppercase; }
 [data-platform="web"] .result strong { font-style:italic; font-size:clamp(55px,11vw,180px); line-height:1; color:var(--lime); letter-spacing:-.08em; }
 [data-platform="web"] .result.goal strong { color:#ffab6b; }

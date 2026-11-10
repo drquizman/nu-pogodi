@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#101a16">
   <title>Один на один · ЧМ-2022</title>
-  <link rel="stylesheet" href="./style.css?v=398a00a42a52">
-  <link rel="stylesheet" href="./web.css?v=398a00a42a52">
+  <link rel="stylesheet" href="./style.css?v=50197495b5cd">
+  <link rel="stylesheet" href="./web.css?v=50197495b5cd">
 </head>
 <body data-platform="web">
   <header class="broadcast">
@@ -30,7 +30,9 @@
 
     <section id="arena" class="arena" aria-label="Футбольное поле">
       <canvas id="game" aria-label="Ворота. Управление движениями рук через камеру телефона."></canvas>
-      <div id="target-layer" class="target-layer" aria-hidden="true"></div>
+      <div id="target-layer" class="target-layer" aria-hidden="true">
+        <span id="shot-marker" class="shot-marker" hidden></span>
+      </div>
       <div id="goal-map" class="goal-map" hidden>
         <h2>Прошлые пенальти</h2>
         <div id="goal-zones" class="goal-zones" aria-label="Направления ударов глазами вратаря">
@@ -140,6 +142,6 @@
   }, {once: true});
 })();
 </script>
-  <script id="game-entry" type="module" src="./game-398a00a42a52.js"></script>
+  <script id="game-entry" type="module" src="./game-50197495b5cd.js"></script>
 </body>
 </html>
