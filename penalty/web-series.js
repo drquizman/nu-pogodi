@@ -1,12 +1,14 @@
 import {WORLD_CUP_2022} from './tv-history.js';
 import {pickZone} from './tv-series.js';
+import {WEB_FORWARDS} from './web-forwards.js';
 
 const goalZones = [[0, 4, 8], [1, 2, 5, 6, 9, 10], [3, 7, 11]];
 const directionNames = ['влево', 'по центру', 'вправо'];
-const {shots} = WORLD_CUP_2022;
-const benchmark = shots.map(player => player.saved);
+const shots = WEB_FORWARDS;
+const matchShooters = WORLD_CUP_2022.shots;
+const benchmark = matchShooters.map(player => player.saved);
 const benchmarkSaves = benchmark.filter(Boolean).length;
-const recordKey = 'penalty-web-scout-best-v1';
+const recordKey = 'penalty-web-forwards-best-v1';
 
 export function pickScoutedZone(scouting, random = Math.random) {
   const direction = pickZone(scouting, random);
@@ -27,8 +29,8 @@ export function initWebSeries() {
   const current = () => shots[results.length];
   const complete = () => results.length === shots.length;
 
-  function attempts(id, outcomes) {
-    get(id).replaceChildren(...shots.map((player, index) => {
+  function attempts(id, roster, outcomes) {
+    get(id).replaceChildren(...roster.map((player, index) => {
       const saved = outcomes[index];
       const marker = document.createElement('span');
       marker.dataset.outcome = saved === undefined ? 'pending' : saved ? 'save' : 'goal';
@@ -44,10 +46,10 @@ export function initWebSeries() {
     get('final-title').textContent = saves > benchmarkSaves ? 'Ты обошёл Мартинеса'
       : saves === benchmarkSaves ? 'На равных с Мартинесом' : 'Мартинес впереди';
     get('player-score').textContent = `${saves}/${shots.length}`;
-    get('keeper-score').textContent = `${benchmarkSaves}/${shots.length}`;
+    get('keeper-score').textContent = `${benchmarkSaves}/${matchShooters.length}`;
     get('best-score').textContent = `Твой рекорд · ${best}/${shots.length}`;
-    attempts('player-attempts', results);
-    attempts('keeper-attempts', benchmark);
+    attempts('player-attempts', shots, results);
+    attempts('keeper-attempts', matchShooters, benchmark);
     screen.dataset.stage = 'final';
     final.hidden = false;
   }
@@ -60,13 +62,14 @@ export function initWebSeries() {
     const player = current();
     const index = results.length;
     const count = player.scouting.reduce((sum, weight) => sum + weight, 0);
-    const portrait = get('shooter-portrait');
-    portrait.style.backgroundPosition = `${index % 3 * 50}% ${index < 3 ? 0 : 100}%`;
+    get('shooter-shirt').dataset.kit = player.kit;
+    get('shooter-shirt').style.setProperty('--kit-ink',player.ink);
+    get('shirt-art-number').textContent = String(player.number);
     get('series-step').textContent = `Удар ${index + 1} / ${shots.length}`;
     get('shooter').textContent = player.name;
     get('shooter-number').textContent = `№ ${player.number}`;
-    get('goal-sample').textContent = count === 1 ? '1 удар · малая выборка'
-      : count < 5 ? `${count} удара · малая выборка` : `${count} ударов до матча`;
+    get('shooter-team').textContent = player.team;
+    get('goal-sample').textContent = `Выборка · ${count} ударов за сборную`;
     bands.forEach((band, direction) => {
       const hits = player.scouting[direction];
       const chance = hits / count;
@@ -74,7 +77,7 @@ export function initWebSeries() {
       band.querySelector('small').textContent = `${hits} из ${count}`;
       band.style.setProperty('--heat', chance);
     });
-    attempts('round-progress', results);
+    attempts('round-progress', shots, results);
     final.hidden = true;
     map.hidden = false;
     screen.dataset.stage = 'scout';
@@ -83,7 +86,7 @@ export function initWebSeries() {
   preview();
   return {
     get complete() { return complete(); },
-    get playerNumber() { return current()?.number; },
+    get player() { return current(); },
     nextShot() { return pickScoutedZone(current().scouting); },
     preview,
     kick() {
@@ -96,7 +99,7 @@ export function initWebSeries() {
       const direction = goalZones.findIndex(zones => zones.includes(zone));
       if (direction >= 0) get('result-sub').textContent = `Удар ${directionNames[direction]}`;
       results.push(saved);
-      attempts('round-progress', results);
+      attempts('round-progress', shots, results);
       screen.dataset.stage = 'result';
       if (complete()) {
         best = Math.max(best, results.filter(Boolean).length);

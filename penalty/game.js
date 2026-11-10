@@ -169,17 +169,18 @@ function updateShotMarker(){
 }
 function updateShirtNumber(){
   if(!shirtNumber)return;
-  const number=series.playerNumber;
-  shirtNumber.visible=number!==undefined;
-  if(number===undefined)return;
+  const player=series.player;
+  shirtNumber.visible=Boolean(player);
+  if(!player)return;
+  kicker.model.traverse(part=>{if(part.isMesh)part.material.color.set(player.color);});
   const texture=shirtNumber.material.map;
   const ctx=texture.image.getContext('2d');
   ctx.clearRect(0,0,128,128);
   ctx.font='900 88px Arial';
   ctx.textAlign='center';
   ctx.textBaseline='middle';
-  ctx.fillStyle='#1b1410';
-  ctx.fillText(String(number),64,66);
+  ctx.fillStyle=player.ink;
+  ctx.fillText(String(player.number),64,66);
   texture.needsUpdate=true;
 }
 function resetBall(){state.phase='ready';state.phaseTime=0;state.flightTime=0;state.outcome=null;state.shotZone=null;state.defense=null;state.targetX=0;state.keeperX=0;lastKeeperX=0;state.pose=null;state.source='manual';state.jumpStart=-100;ball.position.copy(ballStart);ball.rotation.set(0,0,0);result.classList.remove('show');shootButton.disabled=!ready;halo.visible=true;setLabel('ГОТОВ К УДАРУ');$('control-hint').textContent='Исходная стойка по центру · только 12 клавиш';state.nextAuto=time+(series?5:2.1);updateShotMarker();series?.preview();updateShirtNumber();}

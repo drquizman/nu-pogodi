@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#101a16">
-  <title>Один на один · ЧМ-2022</title>
-  <link rel="stylesheet" href="./style.css?v=f508ed50e69c">
-  <link rel="stylesheet" href="./web.css?v=f508ed50e69c">
+  <title>Один на один · Против нападающих</title>
+  <link rel="stylesheet" href="./style.css?v=ab1435b221d4">
+  <link rel="stylesheet" href="./web.css?v=ab1435b221d4">
 </head>
 <body data-platform="web">
   <header class="broadcast">
     <div class="broadcast-brand"><span aria-hidden="true"></span>ОДИН НА ОДИН</div>
-    <div class="broadcast-match">ЧМ-2022 <b>·</b> ¼ ФИНАЛА</div>
+    <div class="broadcast-match">ПРОТИВ НАПАДАЮЩИХ</div>
     <div class="broadcast-controls">
       <strong id="series-step">Удар 1 / 5</strong>
       <button id="connect-phone" aria-label="Подключить телефон" title="Подключить телефон">Телефон</button>
@@ -20,11 +20,31 @@
   </header>
   <main id="match-screen" class="match-screen" data-stage="scout">
     <aside class="player-card" aria-labelledby="shooter">
-      <div id="shooter-portrait" class="player-portrait" aria-hidden="true"></div>
+      <svg id="shooter-shirt" class="player-portrait" viewBox="0 0 240 240" aria-hidden="true">
+        <defs>
+          <pattern id="argentina-stripes" width="50" height="240" patternUnits="userSpaceOnUse" patternTransform="translate(8)">
+            <rect width="50" height="240" fill="#f3f5ef"/>
+            <rect width="25" height="240" fill="#7ac8ef"/>
+          </pattern>
+          <linearGradient id="portugal-split" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="51%" stop-color="#c12e3d"/><stop offset="51%" stop-color="#176648"/>
+          </linearGradient>
+          <linearGradient id="shirt-sheen">
+            <stop stop-color="#121413" stop-opacity=".28"/><stop offset=".45" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#121413" stop-opacity=".22"/>
+          </linearGradient>
+          <path id="shirt-shape" d="M85 37 62 46 29 72 15 113 54 127 68 103 68 204Q120 220 172 204V103L186 127 225 113 211 72 178 46 155 37Q120 60 85 37Z"/>
+        </defs>
+        <circle cx="120" cy="120" r="101" fill="none" stroke="#ffe4bc" stroke-opacity=".12"/>
+        <use class="shirt-body" href="#shirt-shape"/>
+        <use fill="url(#shirt-sheen)" href="#shirt-shape"/>
+        <path class="shirt-trim" d="M85 37Q120 60 155 37L151 49Q120 75 89 49Z M15 113 54 127 58 120 18 106Z M186 127 225 113 222 106 182 120Z"/>
+        <path d="M68 103V203M172 103V203M62 47 68 103M178 47 172 103" fill="none" stroke="#0c141a" stroke-opacity=".22" stroke-width="2"/>
+        <text id="shirt-art-number" class="shirt-art-number" x="120" y="157" text-anchor="middle"></text>
+      </svg>
       <div class="player-caption">
         <span class="player-tag">Бьющий</span>
         <h1 id="shooter"></h1>
-        <p><b id="shooter-number"></b> <span>· Нидерланды</span></p>
+        <p><b id="shooter-number"></b> · <span id="shooter-team"></span></p>
       </div>
     </aside>
 
@@ -80,7 +100,7 @@
           <div class="keeper-portrait" aria-hidden="true"></div>
           <p>Мартинес</p>
           <strong id="keeper-score"></strong>
-          <small>Сейвы · матч ЧМ-2022</small>
+          <small>Сейвы · четвертьфинал ЧМ-2022</small>
           <div id="keeper-attempts" class="attempts" aria-label="Результаты Мартинеса в матче"></div>
         </section>
       </div>
@@ -90,16 +110,43 @@
 
     <dialog id="phone-dialog" class="pair-guide" aria-labelledby="pair-title">
       <div class="pair-guide-copy">
-        <p class="pair-eyebrow">ЧМ-2022 · Нидерланды — Аргентина</p>
+        <p class="pair-eyebrow">Пять нападающих · пять ударов</p>
         <h2 id="pair-title">Встань на ворота</h2>
-        <p class="pair-challenge">В серии пять пенальти. <strong>Три сейва</strong> — и ты обойдёшь Мартинеса, который отбил два в реальном матче.</p>
+        <p class="pair-challenge">Каждый нападающий пробьёт по своей статистике. <strong>Три сейва</strong> — и ты обойдёшь результат Мартинеса на ЧМ-2022.</p>
         <h3>Камера телефона считывает движения рук</h3>
         <ol class="pair-steps">
           <li>Отсканируй QR и нажми «Включить камеру».</li>
           <li>Поставь телефон рядом с экраном камерой к себе. Покажи в кадре плечи, пояс и обе кисти.</li>
           <li>Опусти руки, затем покажи открытую ладонь на две секунды.</li>
         </ol>
-        <p class="pair-tip"><strong>На свистке тянись к метке.</strong> Ближе к центру ворот — одной рукой, к краю — обеими в одну сторону.</p>
+        <p class="pair-tip"><strong>На свистке тянись к метке</strong></p>
+        <div class="gesture-examples">
+          <figure class="gesture-example">
+            <svg viewBox="0 0 144 70" aria-hidden="true">
+              <circle class="gesture-target" cx="112" cy="33" r="10"/>
+              <circle class="gesture-dot" cx="112" cy="33" r="2.7"/>
+              <path class="gesture-arrow" d="M83 14h23m-7-5 7 5-7 5"/>
+              <circle class="gesture-body" cx="44" cy="15" r="9"/>
+              <path class="gesture-body" d="M44 28v23m0 0-10 13m10-13 12 13M38 32l-11 12-4 12"/>
+              <path class="gesture-arm" d="M50 32l23 1h23"/>
+              <circle class="gesture-hand" cx="96" cy="33" r="3.7"/>
+            </svg>
+            <figcaption><strong>Одной рукой</strong><small>Точка ближе к центру</small></figcaption>
+          </figure>
+          <figure class="gesture-example">
+            <svg viewBox="0 0 144 70" aria-hidden="true">
+              <circle class="gesture-target" cx="126" cy="30" r="10"/>
+              <circle class="gesture-dot" cx="126" cy="30" r="2.7"/>
+              <path class="gesture-arrow" d="M95 11h24m-7-5 7 5-7 5"/>
+              <circle class="gesture-body" cx="54" cy="15" r="9"/>
+              <path class="gesture-body" d="M52 28l-5 23m0 0-14 12m14-12 15 13"/>
+              <path class="gesture-arm" d="M58 30l26-1 25-2M46 32l22 10 33-6"/>
+              <circle class="gesture-hand" cx="109" cy="27" r="3.7"/>
+              <circle class="gesture-hand" cx="101" cy="36" r="3.7"/>
+            </svg>
+            <figcaption><strong>Двумя руками</strong><small>Обе руки к краю ворот</small></figcaption>
+          </figure>
+        </div>
       </div>
       <div class="pair-guide-scan">
         <h3>Подключи телефон</h3>
@@ -111,7 +158,7 @@
       </div>
     </dialog>
   </main>
-  <footer>Нидерланды — Аргентина · 9 декабря 2022 <span>Ball Man · Redninjamp · CC BY 4.0</span></footer>
+  <footer>Выборка пенальти за сборные · 2018–2024 <span>Ball Man · Redninjamp · CC BY 4.0</span></footer>
   <div hidden>
     <span id="saves"></span><span id="goals"></span><span id="control-hint"></span>
     <button id="shoot" disabled></button><input id="auto" type="checkbox">
@@ -155,6 +202,6 @@
   }, {once: true});
 })();
 </script>
-  <script id="game-entry" type="module" src="./game-f508ed50e69c.js"></script>
+  <script id="game-entry" type="module" src="./game-ab1435b221d4.js"></script>
 </body>
 </html>

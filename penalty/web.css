@@ -33,7 +33,6 @@
   transform:skew(-15deg);
 }
 .broadcast-match { font-size:clamp(12px,1.35vw,23px); font-weight:850; white-space:nowrap; letter-spacing:.075em; }
-.broadcast-match b { color:var(--orange); }
 .broadcast-controls { display:flex; align-items:center; justify-content:flex-end; gap:10px; white-space:nowrap; }
 #series-step { font-size:clamp(12px,1.35vw,20px); font-weight:850; text-transform:uppercase; }
 .broadcast-controls button {
@@ -70,19 +69,30 @@
   background:radial-gradient(ellipse at 22% 44%,#623318,#1c211c 69%,#141d18);
   border-right:1px solid #ffa14f38;
 }
-.player-portrait, .keeper-portrait {
+.keeper-portrait {
   aspect-ratio:1;
   background-image:url("./assets/web-roster.webp");
   background-size:300% 200%;
   background-repeat:no-repeat;
 }
 .player-portrait {
+  display:block;
+  aspect-ratio:1;
   width:100%;
   max-width:400px;
   margin:0 auto;
   border-radius:6px 6px 0 0;
   border-bottom:3px solid var(--orange);
+  background:radial-gradient(ellipse at center,#38433b,#1a211c 76%);
 }
+.shirt-body { fill:var(--kit-fill,#eceffa); stroke:#e3eadd38; stroke-width:1.4; filter:drop-shadow(0 8px 8px #080e0ccb); }
+.shirt-trim { fill:var(--kit-trim,#172947); }
+.shirt-art-number { fill:var(--kit-ink,#18233f); font-size:66px; font-weight:900; letter-spacing:-.065em; }
+[data-kit="argentina"] { --kit-fill:url(#argentina-stripes); --kit-trim:#172b3f; }
+[data-kit="france"] { --kit-fill:#25457c; --kit-trim:#c1a55b; }
+[data-kit="england"] { --kit-fill:#edf0fa; --kit-trim:#1d3e69; }
+[data-kit="portugal"] { --kit-fill:url(#portugal-split); --kit-trim:#152a26; }
+[data-kit="brazil"] { --kit-fill:#ffc835; --kit-trim:#19734c; }
 .player-caption { padding-top:clamp(13px,2vh,25px); }
 .player-tag { color:var(--orange); font-weight:800; text-transform:uppercase; letter-spacing:.19em; font-size:clamp(9px,1vw,15px); }
 .player-caption h1 {
@@ -295,6 +305,29 @@
   line-height:1.4;
 }
 .pair-tip strong { color:var(--paper); }
+.gesture-examples {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin-top:8px;
+}
+.gesture-example {
+  margin:0;
+  padding:4px 6px 7px;
+  border:1px solid #ffffff20;
+  border-radius:7px;
+  background:#0d1814;
+  text-align:center;
+}
+.gesture-example svg { display:block; width:100%; height:clamp(43px,9dvh,66px); }
+.gesture-body,.gesture-arm,.gesture-arrow,.gesture-target { fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.gesture-body { stroke:#becdc3; stroke-width:4; }
+.gesture-arm { stroke:var(--lime); stroke-width:5; }
+.gesture-target { stroke:var(--lime); stroke-width:1.6; }
+.gesture-arrow { stroke:#a0d25e; stroke-width:1.8; }
+.gesture-dot,.gesture-hand { fill:var(--lime); }
+.gesture-example figcaption { display:grid; gap:2px; font-size:12px; line-height:1.15; color:var(--paper); }
+.gesture-example small { font-size:10px; color:#bcd0bd; }
 .pair-guide-scan {
   min-width:0;
   padding:16px;
@@ -310,6 +343,7 @@
   .pair-guide[open] { grid-template-columns:minmax(0,1fr); }
   .pair-guide-scan { padding:12px; }
   .pair-guide #phone-qr { width:min(100%,200px,34dvh); }
+  .gesture-example svg { height:44px; }
 }
 @media (max-width:720px) {
   [data-platform="web"] .broadcast { grid-template-columns:1fr auto; gap:8px; height:auto; min-height:56px; padding:8px 12px; }
