@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#101a16">
   <title>Один на один · ЧМ-2022</title>
-  <link rel="stylesheet" href="./style.css?v=50197495b5cd">
-  <link rel="stylesheet" href="./web.css?v=50197495b5cd">
+  <link rel="stylesheet" href="./style.css?v=f508ed50e69c">
+  <link rel="stylesheet" href="./web.css?v=f508ed50e69c">
 </head>
 <body data-platform="web">
   <header class="broadcast">
@@ -88,14 +88,27 @@
       <p class="replay-hint">Опусти руки, затем покажи ладонь на две секунды</p>
     </section>
 
-    <dialog id="phone-dialog">
-      <h2>Встань на ворота</h2>
-      <p>Отсканируй QR и включи камеру в браузере телефона. Поставь телефон рядом с экраном.</p>
-      <img id="phone-qr" width="300" height="300" alt="QR-код камеры" hidden>
-      <a id="phone-link" target="_blank" rel="noreferrer" hidden>Открыть ссылку камеры ↗</a>
-      <p id="pair-message" role="status">Готовим подключение…</p>
-      <button id="close-phone-dialog" class="keyboard-choice">Обновить QR</button>
-      <button id="disconnect-phone" hidden>Отключить телефон</button>
+    <dialog id="phone-dialog" class="pair-guide" aria-labelledby="pair-title">
+      <div class="pair-guide-copy">
+        <p class="pair-eyebrow">ЧМ-2022 · Нидерланды — Аргентина</p>
+        <h2 id="pair-title">Встань на ворота</h2>
+        <p class="pair-challenge">В серии пять пенальти. <strong>Три сейва</strong> — и ты обойдёшь Мартинеса, который отбил два в реальном матче.</p>
+        <h3>Камера телефона считывает движения рук</h3>
+        <ol class="pair-steps">
+          <li>Отсканируй QR и нажми «Включить камеру».</li>
+          <li>Поставь телефон рядом с экраном камерой к себе. Покажи в кадре плечи, пояс и обе кисти.</li>
+          <li>Опусти руки, затем покажи открытую ладонь на две секунды.</li>
+        </ol>
+        <p class="pair-tip"><strong>На свистке тянись к метке.</strong> Ближе к центру ворот — одной рукой, к краю — обеими в одну сторону.</p>
+      </div>
+      <div class="pair-guide-scan">
+        <h3>Подключи телефон</h3>
+        <img id="phone-qr" width="300" height="300" alt="QR-код для подключения камеры" hidden>
+        <a id="phone-link" target="_blank" rel="noreferrer" hidden>Открыть ссылку камеры ↗</a>
+        <p id="pair-message" role="status">Готовим подключение…</p>
+        <button id="close-phone-dialog" class="keyboard-choice">Обновить QR</button>
+        <button id="disconnect-phone" hidden>Отключить телефон</button>
+      </div>
     </dialog>
   </main>
   <footer>Нидерланды — Аргентина · 9 декабря 2022 <span>Ball Man · Redninjamp · CC BY 4.0</span></footer>
@@ -142,6 +155,6 @@
   }, {once: true});
 })();
 </script>
-  <script id="game-entry" type="module" src="./game-50197495b5cd.js"></script>
+  <script id="game-entry" type="module" src="./game-f508ed50e69c.js"></script>
 </body>
 </html>
