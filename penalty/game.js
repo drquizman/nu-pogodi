@@ -7,8 +7,10 @@ import { StadiumAudio, whistleLead, runupElapsed } from './sounds.js';
 const $=id=>document.getElementById(id), V=(x=0,y=0,z=0)=>new T.Vector3(x,y,z);
 const clamp=T.MathUtils.clamp, lerp=T.MathUtils.lerp, smooth=u=>{u=clamp(u,0,1);return u*u*(3-2*u);};
 const canvas=$('game'), arena=$('arena');
-const tvMode=document.body.dataset.platform==='tv';
-const series=tvMode?(await import('./tv-series.js')).initSeries():null;
+const platform=document.body.dataset.platform;
+const tvMode=platform==='tv';
+const seriesScreen=tvMode||platform==='web';
+const series=seriesScreen?(await import('./tv-series.js')).initSeries():null;
 function showLoadingError(message){
   if($('loading-message'))window.dispatchEvent(new CustomEvent('penalty-load-error',{detail:message}));
   else $('loading').textContent=message;
@@ -21,8 +23,8 @@ updateSoundButton();
 for(const event of ['pointerdown','keydown'])document.addEventListener(event,e=>{if(e.isTrusted)audio.unlock();},{capture:true});
 $('sound').addEventListener('click',()=>{audio.setEnabled(!audio.enabled);updateSoundButton();try{localStorage.setItem('penalty-sound-enabled',String(audio.enabled));}catch{}});
 let renderer;
-try{renderer=new T.WebGLRenderer({canvas,antialias:!tvMode,alpha:false,powerPreference:'high-performance'});}catch(error){showLoadingError(tvMode?'Для игры нужен Android System WebView с поддержкой WebGL 2.':'Полю нужен WebGL 2. Откройте игру в обновлённом браузере с включённым аппаратным ускорением.');throw error;}
-renderer.setPixelRatio(Math.min(devicePixelRatio,tvMode?1:2));
+try{renderer=new T.WebGLRenderer({canvas,antialias:!seriesScreen,alpha:false,powerPreference:'high-performance'});}catch(error){showLoadingError(tvMode?'Для игры нужен Android System WebView с поддержкой WebGL 2.':'Полю нужен WebGL 2. Откройте игру в обновлённом браузере с включённым аппаратным ускорением.');throw error;}
+renderer.setPixelRatio(Math.min(devicePixelRatio,seriesScreen?1:2));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
 renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
 const scene=new T.Scene();scene.background=new T.Color('#afc4b0');scene.fog=new T.Fog('#afc4b0',35,80);
@@ -33,7 +35,7 @@ const screenDirection=()=>camera.position.z< -6.5?-1:1;
 let view=0;camera.position.copy(cameraViews[0].p);camera.lookAt(cameraViews[0].look);
 scene.add(new T.HemisphereLight('#fcf5df','#496e4c',2.6));
 const sun=new T.DirectionalLight('#fff1ca',3.7);sun.position.set(-12,19,10);sun.castShadow=true;
-const shadowSize=tvMode?768:2048;
+const shadowSize=seriesScreen?768:2048;
 sun.shadow.mapSize.set(shadowSize,shadowSize);Object.assign(sun.shadow.camera,{left:-17,right:17,top:20,bottom:-18,near:1,far:65});sun.shadow.normalBias=.035;sun.shadow.bias=-.0001;sun.shadow.radius=4;scene.add(sun);
 const mat=(color,extra={})=>new T.MeshStandardMaterial({color,roughness:.85,...extra});
 const green=mat('#53795b'),darkGreen=mat('#456c52'),white=mat('#f0f0d4'),wood=mat('#c6a46f'),steel=mat('#284d45'),chalk=mat('#c8dbb3');
@@ -254,13 +256,13 @@ function fitGoalCamera(){
 }
 function resize(){const w=arena.clientWidth,h=arena.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;fitGoalCamera();}
 new ResizeObserver(resize).observe(arena);resize();
-function frame(now){const dt=Math.min((now-last)/1000,tvMode?.12:.05);last=now;update(dt);updateZoneMarkers();renderer.render(scene,camera);requestAnimationFrame(frame);}
+function frame(now){const dt=Math.min((now-last)/1000,seriesScreen?.12:.05);last=now;update(dt);updateZoneMarkers();renderer.render(scene,camera);requestAnimationFrame(frame);}
 requestAnimationFrame(frame);
 document.addEventListener('visibilitychange',()=>{last=performance.now();releaseControls();if(document.hidden)audio.stop();});
 canvas.addEventListener('pointerdown',()=>canvas.focus({preventScroll:true}));
 window.addEventListener('keydown',e=>{
-  if(tvMode){
-    if(!$('phone-dialog').open&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+  if(seriesScreen){
+    if(tvMode&&!$('phone-dialog').open&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
       e.preventDefault();
       const buttons=[...document.querySelectorAll('.header-right button:not(:disabled)')];
       const current=buttons.indexOf(document.activeElement);
@@ -336,10 +338,11 @@ try{
 async function connectPhone(){
   try {
     const {initPhoneHost}=await import('./phone-host.js?v=intent-gate-7');
-    initPhoneHost(tvMode?{phoneBase:'https://drquizman.github.io/nu-pogodi/penalty/'}:undefined);
+    const phoneBase=tvMode?'https://drquizman.github.io/nu-pogodi/penalty/':seriesScreen?location.href:undefined;
+    initPhoneHost({phoneBase});
   } catch(error) {
     console.error(error);
-    if(!tvMode)document.body.dataset.controls='keyboard';
+    if(!seriesScreen)document.body.dataset.controls='keyboard';
     $('phone-status').textContent='Не удалось запустить подключение камеры. Попробуйте ещё раз.';
     $('phone-status').classList.add('connection-error');
     $('connect-phone').onclick=()=>void connectPhone();
