@@ -1,7 +1,7 @@
 import {PhoneConnection} from './phone-connection.js?v=intent-gate-7';
 import {createSeat,resumeSeat} from './cloud.js?v=intent-gate-7';
 import {IntentionalStart,START_PROTOCOL} from './palm.js?v=intent-gate-7';
-export function initPhoneHost({phoneBase}={}){
+export function initPhoneHost({phoneBase,onRoom}={}){
   const $=id=>document.getElementById(id),button=$('connect-phone'),dialog=$('phone-dialog'),panel=$('motion-setup');
   let seat,connection,phone=false,lastPose=0,lastState='',lastSent=0,busy=false,generation=0,mode='phone',tracked=false,startPhase='lower';
   const starter=new IntentionalStart();
@@ -35,6 +35,7 @@ export function initPhoneHost({phoneBase}={}){
   function lost(s){starter.reset();startPhase='lower';tracked=false;lastPose=0;progress=0;confirmUntil=0;window.penalty.stopMotion();if(phoneBase)window.penalty.pauseAuto();text(s);layout();}
   function showSeat(){
     $('phone-qr').src=seat.qr;$('phone-qr').hidden=false;$('phone-link').href=seat.phoneURL;$('phone-link').hidden=false;
+    onRoom?.(seat);
   }
   function connect(current){
     connection?.close();connection=new PhoneConnection({room:seat.id,role:'host',key:seat.hostKey},m=>{

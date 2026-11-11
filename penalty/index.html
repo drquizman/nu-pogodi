@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#101a16">
   <title>Один на один · Против нападающих</title>
-  <link rel="stylesheet" href="./style.css?v=84b0949578b8">
-  <link rel="stylesheet" href="./web.css?v=84b0949578b8">
+  <link rel="stylesheet" href="./style.css?v=88ec059e0f81">
+  <link rel="stylesheet" href="./web.css?v=88ec059e0f81">
 </head>
 <body class="forward-series" data-platform="web">
   <header class="broadcast">
@@ -82,6 +82,7 @@
           <span>Одна рука вбок — отбить</span><span>Две в одну сторону — прыгнуть</span>
         </div>
         <p class="height-hint">Руки вниз — стойка по центру</p>
+        <section class="global-penalty-stats" aria-label="Статистика всех игроков" data-penalty-totals></section>
       </div>
       <p id="start-confirmation" role="status" hidden>Ладонь принята · играем!</p>
       <div class="match-status">
@@ -125,16 +126,24 @@
         </div>
         <div class="palm-progress"><i id="replay-progress"></i></div>
       </div>
+      <section class="global-penalty-stats" aria-label="Статистика всех игроков" data-penalty-totals></section>
     </section>
 
     <dialog id="phone-dialog" class="pair-guide" aria-labelledby="pair-title">
+      <aside id="support-qr-card" class="pair-guide-support" aria-labelledby="support-title" hidden>
+        <img id="support-qr" data-tv-src="./support-qr.png" width="300" height="300" alt="QR-код для добровольной поддержки автора в Telegram">
+        <div>
+          <h3 id="support-title">Поддержать автора</h3>
+          <p>Добровольный донат в Telegram</p>
+        </div>
+      </aside>
       <div class="pair-guide-copy">
         <p class="pair-eyebrow"><span id="roster-count"></span> бьющих · 5 ударов за серию</p>
         <h2 id="pair-title">Встань на ворота</h2>
         <p class="pair-challenge">Отбивай удары звёзд и сравнивай свои сейвы с результатами вратарей чемпионата мира.</p>
         <h3>Камера телефона считывает движения рук</h3>
         <ol class="pair-steps">
-          <li>Отсканируй QR и нажми «Включить камеру».</li>
+          <li>Сканируй QR для камеры и нажми «Включить камеру».</li>
           <li>Поставь телефон рядом с экраном камерой к себе. Покажи в кадре плечи, пояс и обе кисти.</li>
           <li>Опусти руки, затем покажи открытую ладонь на две секунды.</li>
         </ol>
@@ -175,9 +184,19 @@
         <button id="pair-sound" class="keyboard-choice" hidden>Включить звук</button>
         <button id="close-phone-dialog" class="keyboard-choice" autofocus>Обновить QR</button>
         <button id="disconnect-phone" hidden>Отключить телефон</button>
+        <section class="global-penalty-stats" aria-label="Статистика всех игроков" data-penalty-totals></section>
       </div>
     </dialog>
   </main>
+  <template id="penalty-totals-template">
+    <b class="global-penalty-label">Все игроки</b>
+    <div class="global-penalty-values">
+      <span><strong data-total="series">—</strong> Серии</span>
+      <span><strong data-total="saves">—</strong> Сейвы</span>
+      <span><strong data-total="goals">—</strong> Голы</span>
+    </div>
+    <small data-totals-status role="status">Загружаем общую статистику…</small>
+  </template>
   <footer>Пенальти сборных и архивные удары <span>Ball Man · Redninjamp · CC BY 4.0</span></footer>
   <div hidden>
     <span id="saves"></span><span id="goals"></span><span id="control-hint"></span>
@@ -222,6 +241,6 @@
   }, {once: true});
 })();
 </script>
-  <script id="game-entry" type="module" src="./game-84b0949578b8.js"></script>
+  <script id="game-entry" type="module" src="./game-88ec059e0f81.js"></script>
 </body>
 </html>

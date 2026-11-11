@@ -10,7 +10,8 @@ const canvas=$('game'), arena=$('arena');
 const platform=document.body.dataset.platform;
 const tvMode=platform==='tv';
 const seriesScreen=tvMode||platform==='web';
-const series=seriesScreen?(await import('./web-series.js')).initWebSeries():null;
+const totals=seriesScreen?(await import('./global-stats.js')).initGlobalStats():null;
+const series=seriesScreen?(await import('./web-series.js')).initWebSeries({onComplete:totals.record}):null;
 function showLoadingError(message){
   if($('loading-message'))window.dispatchEvent(new CustomEvent('penalty-load-error',{detail:message}));
   else $('loading').textContent=message;
@@ -441,7 +442,7 @@ async function connectPhone(){
   try {
     const {initPhoneHost}=await import('./phone-host.js?v=intent-gate-7');
     const phoneBase=tvMode?'https://drquizman.github.io/nu-pogodi/penalty/':seriesScreen?location.href:undefined;
-    initPhoneHost({phoneBase});
+    initPhoneHost({phoneBase,onRoom:totals?.setRoom});
   } catch(error) {
     console.error(error);
     if(!seriesScreen)document.body.dataset.controls='keyboard';

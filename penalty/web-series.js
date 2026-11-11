@@ -35,7 +35,7 @@ export function pickScoutedZone(scouting, random = Math.random) {
   return zones[Math.floor(random() * zones.length)];
 }
 
-export function initWebSeries() {
+export function initWebSeries({onComplete} = {}) {
   const get = id => document.getElementById(id);
   const screen = get('match-screen');
   const map = get('goal-map');
@@ -163,6 +163,7 @@ export function initWebSeries() {
         career.saves += saves;
         career.best = Math.max(career.best, saves);
         try { localStorage.setItem(recordKey, JSON.stringify(career)); } catch {}
+        onComplete?.(saves);
       }
     },
   };

@@ -280,6 +280,26 @@
 }
 .career-stats { color:#d4dec9; font-size:clamp(12px,1.35vw,21px); }
 .career-stats b { color:var(--paper); }
+.global-penalty-stats {
+  display:grid;
+  justify-items:center;
+  gap:5px;
+  padding:7px 10px;
+  border:1px solid #ffffff26;
+  border-radius:7px;
+  background:#111f1b;
+  color:#d4dec9;
+  text-align:center;
+}
+.global-penalty-label { color:var(--lime); font-size:clamp(10px,1.2vw,17px); }
+.global-penalty-values { display:flex; flex-wrap:wrap; justify-content:center; gap:4px clamp(7px,1.6vw,26px); }
+.global-penalty-values span { display:grid; gap:2px; font-size:clamp(10px,1.1vw,16px); }
+.global-penalty-values strong { color:var(--paper); font-size:clamp(16px,2.1vw,31px); line-height:1; font-variant-numeric:tabular-nums; }
+.global-penalty-stats small { font-size:11px; }
+.pair-guide .global-penalty-stats { margin-top:12px; padding:7px 4px; }
+.pair-guide .global-penalty-values { gap:4px clamp(5px,1vw,15px); }
+.motion-setup .global-penalty-stats { margin-top:clamp(8px,2vh,22px); }
+.final-score .global-penalty-stats { width:min(84vw,900px); }
 #career-directions { padding-left:clamp(9px,1.3vw,20px); border-left:1px solid #f6f1df55; }
 .replay-guide {
   width:min(84vw,900px);
@@ -391,11 +411,53 @@
 [data-platform="tv"] .pair-guide #phone-link { display:none; }
 [data-platform="tv"] .broadcast-controls button,
 [data-platform="tv"] .pair-guide .keyboard-choice { font-size:clamp(14px,1.2vw,19px); }
+.pair-guide[open]:has(.pair-guide-support:not([hidden])) {
+  grid-template-columns:minmax(125px,.66fr) minmax(0,1.7fr) minmax(0,1fr);
+  grid-template-areas:"support copy scan";
+  gap:clamp(12px,1.65vw,30px);
+}
+.pair-guide:has(.pair-guide-support:not([hidden])) .pair-guide-copy { grid-area:copy; }
+.pair-guide:has(.pair-guide-support:not([hidden])) .pair-guide-scan { grid-area:scan; padding-inline:12px; }
+.pair-guide-support {
+  grid-area:support;
+  min-width:0;
+  padding:12px 7px;
+  border:1px solid #ffffff24;
+  border-radius:10px;
+  background:#0d1814;
+}
+.pair-guide-support img { width:min(100%,145px,27dvh); margin:0 auto 8px; border-radius:4px; }
+.pair-guide-support h3 { color:var(--paper); }
+.pair-guide-support p { margin:5px 0 0; color:#bcd0bd; font-size:clamp(10px,1.1vw,15px); }
+@media (max-width:820px) {
+  .pair-guide[open]:has(.pair-guide-support:not([hidden])) {
+    width:calc(100% - 30px);
+    grid-template-columns:minmax(94px,.62fr) minmax(0,1.6fr) minmax(0,1.12fr);
+    padding:12px;
+    gap:10px;
+  }
+  .pair-guide-support { padding:7px 5px; }
+  .pair-guide-support img { width:min(100%,104px,28dvh); margin-bottom:5px; }
+  [data-platform="tv"] .pair-guide h2 { font-size:clamp(23px,3.5vw,31px); margin-bottom:6px; }
+  [data-platform="tv"] .pair-challenge { font-size:12px; margin-bottom:8px; }
+  [data-platform="tv"] .pair-guide h3 { font-size:13px; }
+  [data-platform="tv"] .pair-steps { margin-top:4px; font-size:12px; line-height:1.32; }
+  [data-platform="tv"] .pair-steps li { margin-top:4px; }
+  [data-platform="tv"] .pair-tip { margin-top:6px; padding-top:5px; }
+  [data-platform="tv"] .gesture-examples { margin-top:4px; }
+  [data-platform="tv"] .gesture-example svg { height:35px; }
+  [data-platform="tv"] .gesture-example figcaption { font-size:12px; }
+  [data-platform="tv"] .gesture-example small { font-size:10px; }
+}
 @media (max-width:580px) {
   .pair-guide[open] { grid-template-columns:minmax(0,1fr); }
   .pair-guide-scan { padding:12px; }
   .pair-guide #phone-qr { width:min(100%,200px,34dvh); }
   .gesture-example svg { height:44px; }
+  .pair-guide[open]:has(.pair-guide-support:not([hidden])) {
+    grid-template-columns:minmax(0,1fr);
+    grid-template-areas:"copy" "scan" "support";
+  }
 }
 @media (max-width:720px) {
   .forward-series .broadcast { grid-template-columns:1fr auto; gap:8px; height:auto; min-height:56px; padding:8px 12px; }
@@ -425,6 +487,7 @@
   .final-score { padding:12px 3%; gap:9px; }
   .score-panels { width:94vw; }
   .replay-guide { width:94vw; }
+  .final-score .global-penalty-stats { width:94vw; }
   #career-directions { width:100%; padding:0; border:0; }
   .keeper-portrait { display:none; }
   .forward-series footer span { display:none; }
