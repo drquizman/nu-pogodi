@@ -5,14 +5,34 @@ export function initPhoneHost({phoneBase}={}){
   const $=id=>document.getElementById(id),button=$('connect-phone'),dialog=$('phone-dialog'),panel=$('motion-setup');
   let seat,connection,phone=false,lastPose=0,lastState='',lastSent=0,busy=false,generation=0,mode='phone',tracked=false,startPhase='lower';
   const starter=new IntentionalStart();
+  const feedback=[...document.querySelectorAll('[data-pose-feedback]')];
+  const progressBars=[$('palm-progress'),$('replay-progress')].filter(Boolean);
+  let progress=0,confirmUntil=0;
   function text(s){$('phone-status').textContent=s;$('pair-message').textContent=s;$('motion-status').textContent=s;}
+  function setText(node,value){if(node&&node.textContent!==value)node.textContent=value;}
   function layout(){
     document.body.dataset.controls=mode;
     const state=window.penalty.getState();
     panel.hidden=mode!=='phone'||dialog.open||state.auto||state.seriesComplete;
-    $('motion-title').innerHTML=tracked?(startPhase==='lower'?'Сначала опусти обе руки':startPhase==='show'?'Подними одну ладонь к лицу<br>вторую руку оставь внизу':'Держи ладонь неподвижно<br>2 секунды'):'Встань в кадр<br>покажи пояс и обе кисти';
+    const stance=tracked&&startPhase!=='lower',palm=tracked&&startPhase==='hold';
+    const instruction=!tracked?(phone?'Встань в кадр':'Подключи телефон')
+      :palm?'Ладонь видна. Держи 2 секунды'
+      :stance?'Стойка принята. Подними ладонь':'Встань по центру и опусти руки';
+    setText($('motion-title'),instruction);
+    setText($('replay-status'),instruction);
+    for(const row of feedback){
+      const stanceStep=row.querySelector('[data-pose-step="stance"]');
+      const palmStep=row.querySelector('[data-pose-step="palm"]');
+      stanceStep.toggleAttribute('data-confirmed',stance);
+      palmStep.toggleAttribute('data-confirmed',palm);
+      setText(stanceStep,stance?'✓ Стойка принята':'1. Руки вниз');
+      setText(palmStep,palm?'✓ Ладонь видна':'2. Ладонь к камере');
+    }
+    for(const bar of progressBars)bar.style.width=`${Math.round(progress*100)}%`;
+    const confirmation=$('start-confirmation');
+    if(confirmation)confirmation.hidden=!state.auto||performance.now()>=confirmUntil;
   }
-  function lost(s){starter.reset();startPhase='lower';tracked=false;lastPose=0;$('palm-progress').style.width='0%';window.penalty.stopMotion();if(phoneBase)window.penalty.pauseAuto();text(s);layout();}
+  function lost(s){starter.reset();startPhase='lower';tracked=false;lastPose=0;progress=0;confirmUntil=0;window.penalty.stopMotion();if(phoneBase)window.penalty.pauseAuto();text(s);layout();}
   function showSeat(){
     $('phone-qr').src=seat.qr;$('phone-qr').hidden=false;$('phone-link').href=seat.phoneURL;$('phone-link').hidden=false;
   }
@@ -31,8 +51,11 @@ export function initPhoneHost({phoneBase}={}){
         if(phoneBase&&!tracked)window.penalty.pauseAuto();
         text(tracked?'Камера видит тебя':m.guide||'Покажи пояс и обе кисти');
         const hold=starter.update({neutral:m.startNeutral===true,gesture:m.startGesture===true,anchor:m.startAnchor},m.startProtocol===START_PROTOCOL&&m.tracked&&!m.held&&!window.penalty.getState().auto,performance.now());
-        startPhase=hold.phase;$('palm-progress').style.width=`${Math.round(hold.progress*100)}%`;
-        if(hold.start)window.penalty.startAuto();
+        startPhase=hold.phase;progress=hold.progress;
+        if(hold.start){
+          window.penalty.startAuto();
+          confirmUntil=performance.now()+2400;
+        }
         if(dialog.open)dialog.close();layout();
       }
       // Start is decided here from fresh gesture frames; legacy actions cannot start.
@@ -44,7 +67,7 @@ export function initPhoneHost({phoneBase}={}){
     if(fresh){
       const old=connection;connection=null;void old?.send({type:'closed'}).finally(()=>old.close());
       phone=false;lastPose=0;tracked=false;starter.reset();
-      startPhase='lower';$('palm-progress').style.width='0%';$('phone-qr').hidden=true;$('phone-link').hidden=true;
+      startPhase='lower';progress=0;confirmUntil=0;$('phone-qr').hidden=true;$('phone-link').hidden=true;
     }
     if(!dialog.open)dialog.showModal();layout();text('Готовим QR-код…');
     try{

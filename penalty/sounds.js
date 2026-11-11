@@ -1,11 +1,39 @@
-// Local, procedural stadium effects. No downloads or audio permissions needed.
+// Procedural ball effects plus packaged music and stadium clips.
 export const whistleLead=(random=Math.random)=>random()<.5?1:2;
 export const runupElapsed=(elapsed,lead)=>Math.max(0,elapsed-(lead-.78));
 
 export class StadiumAudio{
   constructor(context=null){
     this.context=context;this.enabled=true;this.active=new Set();this.epoch=0;
+    this.scene='silent';this.blocked=false;
     if(context)this.setup();
+  }
+  attachStadium(){
+    this.clips=Object.fromEntries(Object.entries({
+      menu:['theme',.54,true],field:['crowd',.32,true],
+      applause:['applause',.92,false],cheer:['goal',.84,false],
+    }).map(([name,[file,volume,loop]])=>{
+      const clip=new Audio(`./assets/stadium-${file}.mp3`);
+      clip.volume=volume;clip.loop=loop;clip.preload='auto';
+      return [name,clip];
+    }));
+  }
+  setScene(scene){
+    if(scene===this.scene)return;
+    this.scene=scene;this.syncScene();
+  }
+  syncScene(){
+    if(!this.clips)return;
+    const current=this.enabled?this.clips[this.scene]:null;
+    for(const name of ['menu','field']){
+      const clip=this.clips[name];
+      if(clip!==current)clip.pause();
+    }
+    if(current?.paused)current.play().then(()=>{
+      if(current===this.clips[this.scene])this.blocked=false;
+    }).catch(error=>{
+      if(current===this.clips[this.scene]&&this.enabled&&error.name==='NotAllowedError')this.blocked=true;
+    });
   }
   setup(){
     const c=this.context;
@@ -20,6 +48,7 @@ export class StadiumAudio{
     this.wet=c.createGain();this.wet.gain.value=.24;this.wet.connect(reverb);reverb.connect(this.master);
   }
   unlock(){
+    this.syncScene();
     try{
       if(!this.context){const Audio=globalThis.AudioContext||globalThis.webkitAudioContext;if(!Audio)return;this.context=new Audio();this.setup();}
       if(this.context.state==='suspended'&&!this.context.startRendering)this.context.resume().catch(()=>{});
@@ -29,11 +58,13 @@ export class StadiumAudio{
     this.enabled=enabled;
     if(this.master){const c=this.context;this.master.gain.cancelScheduledValues(c.currentTime);this.master.gain.setTargetAtTime(enabled?0.6:0,c.currentTime,.025);}
     if(enabled)this.unlock();
+    else{this.stop();this.syncScene();}
   }
   stop(){
     this.epoch++;
     for(const source of this.active){try{source.stop();}catch{}}
     this.active.clear();
+    for(const name of ['applause','cheer'])this.clips?.[name].pause();
   }
   track(source,end,nodes=[]){
     this.active.add(source);source.onended=()=>{this.active.delete(source);source.disconnect();for(const node of nodes)node.disconnect();};source.stop(end);
@@ -98,6 +129,17 @@ export class StadiumAudio{
     }
   }
   play(name){
+    if(!this.enabled)return false;
+    const clip=this.clips?.[name];
+    if(clip){
+      clip.currentTime=0;
+      const epoch=this.epoch;
+      clip.play().catch(()=>{if(epoch===this.epoch)this.playSynth(name);});
+      return true;
+    }
+    return this.playSynth(name);
+  }
+  playSynth(name){
     if(!this.enabled||!this.context)return false;
     const c=this.context,epoch=this.epoch;
     const start=()=>{if(epoch!==this.epoch||!this.enabled)return;const at=c.currentTime+.005;if(name==='cheer')this.crowd(at);else this[name]?.(at);};

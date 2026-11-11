@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#101a16">
   <title>Один на один · Против нападающих</title>
-  <link rel="stylesheet" href="./style.css?v=ab1435b221d4">
-  <link rel="stylesheet" href="./web.css?v=ab1435b221d4">
+  <link rel="stylesheet" href="./style.css?v=84b0949578b8">
+  <link rel="stylesheet" href="./web.css?v=84b0949578b8">
 </head>
-<body data-platform="web">
+<body class="forward-series" data-platform="web">
   <header class="broadcast">
     <div class="broadcast-brand"><span aria-hidden="true"></span>ОДИН НА ОДИН</div>
-    <div class="broadcast-match">ПРОТИВ НАПАДАЮЩИХ</div>
+    <div id="series-target" class="broadcast-match"></div>
     <div class="broadcast-controls">
       <strong id="series-step">Удар 1 / 5</strong>
       <button id="connect-phone" aria-label="Подключить телефон" title="Подключить телефон">Телефон</button>
@@ -54,7 +54,7 @@
         <span id="shot-marker" class="shot-marker" hidden></span>
       </div>
       <div id="goal-map" class="goal-map" hidden>
-        <h2>Прошлые пенальти</h2>
+        <h2 id="goal-heading">Прошлые пенальти</h2>
         <div id="goal-zones" class="goal-zones" aria-label="Направления ударов глазами вратаря">
           <div><span>Слева</span><strong></strong><small></small></div>
           <div><span>Центр</span><strong></strong><small></small></div>
@@ -72,13 +72,18 @@
       </div>
       <div id="motion-setup" class="motion-setup" hidden>
         <p id="motion-status">Включи камеру на телефоне</p>
-        <h2 id="motion-title">Покажи открытую ладонь</h2>
+        <h2 id="motion-title" aria-live="polite">Встань в кадр</h2>
+        <div class="pose-feedback" data-pose-feedback>
+          <span data-pose-step="stance">1. Руки вниз</span>
+          <span data-pose-step="palm">2. Ладонь к камере</span>
+        </div>
         <div class="palm-progress"><i id="palm-progress"></i></div>
         <div class="motion-instructions">
           <span>Одна рука вбок — отбить</span><span>Две в одну сторону — прыгнуть</span>
         </div>
         <p class="height-hint">Руки вниз — стойка по центру</p>
       </div>
+      <p id="start-confirmation" role="status" hidden>Ладонь принята · играем!</p>
       <div class="match-status">
         <span id="phone-status"></span>
         <span id="state-label">ГОТОВ К УДАРУ</span>
@@ -87,7 +92,6 @@
     </section>
 
     <section id="final-score" class="final-score" aria-labelledby="final-title" hidden>
-      <p class="final-eyebrow">Сравнение с матчем</p>
       <h2 id="final-title"></h2>
       <div class="score-panels">
         <section class="score-panel yours">
@@ -97,22 +101,37 @@
           <div id="player-attempts" class="attempts" aria-label="Твои результаты"></div>
         </section>
         <section class="score-panel benchmark">
-          <div class="keeper-portrait" aria-hidden="true"></div>
-          <p>Мартинес</p>
+          <div id="keeper-portrait" class="keeper-portrait" aria-hidden="true"></div>
+          <p id="keeper-name"></p>
           <strong id="keeper-score"></strong>
-          <small>Сейвы · четвертьфинал ЧМ-2022</small>
-          <div id="keeper-attempts" class="attempts" aria-label="Результаты Мартинеса в матче"></div>
+          <small id="keeper-match"></small>
+          <div id="keeper-attempts" class="attempts" aria-label="Результаты вратаря в матче"></div>
         </section>
       </div>
-      <p id="best-score"></p>
-      <p class="replay-hint">Опусти руки, затем покажи ладонь на две секунды</p>
+      <div class="career-stats" aria-label="Статистика за все серии">
+        <span>Серий <b id="career-rounds"></b></span>
+        <span>Сейвы <b id="career-rate"></b></span>
+        <span>Рекорд <b id="best-score"></b></span>
+        <div id="career-directions" aria-label="Сейвы по направлениям">
+          <span>Слева <b></b></span><span>Центр <b></b></span><span>Справа <b></b></span>
+        </div>
+      </div>
+      <div class="replay-guide">
+        <h3>Ещё серия</h3>
+        <p id="replay-status" aria-live="polite">Встань в кадр</p>
+        <div class="pose-feedback" data-pose-feedback>
+          <span data-pose-step="stance">1. Руки вниз</span>
+          <span data-pose-step="palm">2. Ладонь к камере</span>
+        </div>
+        <div class="palm-progress"><i id="replay-progress"></i></div>
+      </div>
     </section>
 
     <dialog id="phone-dialog" class="pair-guide" aria-labelledby="pair-title">
       <div class="pair-guide-copy">
-        <p class="pair-eyebrow">Пять нападающих · пять ударов</p>
+        <p class="pair-eyebrow"><span id="roster-count"></span> бьющих · 5 ударов за серию</p>
         <h2 id="pair-title">Встань на ворота</h2>
-        <p class="pair-challenge">Каждый нападающий пробьёт по своей статистике. <strong>Три сейва</strong> — и ты обойдёшь результат Мартинеса на ЧМ-2022.</p>
+        <p class="pair-challenge">Отбивай удары звёзд и сравнивай свои сейвы с результатами вратарей чемпионата мира.</p>
         <h3>Камера телефона считывает движения рук</h3>
         <ol class="pair-steps">
           <li>Отсканируй QR и нажми «Включить камеру».</li>
@@ -153,12 +172,13 @@
         <img id="phone-qr" width="300" height="300" alt="QR-код для подключения камеры" hidden>
         <a id="phone-link" target="_blank" rel="noreferrer" hidden>Открыть ссылку камеры ↗</a>
         <p id="pair-message" role="status">Готовим подключение…</p>
-        <button id="close-phone-dialog" class="keyboard-choice">Обновить QR</button>
+        <button id="pair-sound" class="keyboard-choice" hidden>Включить звук</button>
+        <button id="close-phone-dialog" class="keyboard-choice" autofocus>Обновить QR</button>
         <button id="disconnect-phone" hidden>Отключить телефон</button>
       </div>
     </dialog>
   </main>
-  <footer>Выборка пенальти за сборные · 2018–2024 <span>Ball Man · Redninjamp · CC BY 4.0</span></footer>
+  <footer>Пенальти сборных и архивные удары <span>Ball Man · Redninjamp · CC BY 4.0</span></footer>
   <div hidden>
     <span id="saves"></span><span id="goals"></span><span id="control-hint"></span>
     <button id="shoot" disabled></button><input id="auto" type="checkbox">
@@ -202,6 +222,6 @@
   }, {once: true});
 })();
 </script>
-  <script id="game-entry" type="module" src="./game-ab1435b221d4.js"></script>
+  <script id="game-entry" type="module" src="./game-84b0949578b8.js"></script>
 </body>
 </html>

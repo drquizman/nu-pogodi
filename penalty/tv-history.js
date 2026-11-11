@@ -1,13 +1,24 @@
-// Directions in the replay are from the keeper's point of view.
-// See android-tv/README.md for the match and pre-match observations.
-export const WORLD_CUP_2022 = {
-  context: 'Нидерланды — Аргентина · ЧМ-2022',
-  keeper: 'Эмилиано Мартинес',
-  shots: [
-    {name:'Вирджил ван Дейк', number:4, target:11, direction:'справа внизу', saved:true, scouting:[0,0,1]},
-    {name:'Стевен Бергёйс', number:11, target:8, direction:'слева внизу', saved:true, scouting:[3,0,2]},
-    {name:'Тён Копмейнерс', number:20, target:8, direction:'слева внизу', saved:false, scouting:[3,2,1]},
-    {name:'Ваут Вегхорст', number:19, target:11, direction:'справа внизу', saved:false, scouting:[0,0,2]},
-    {name:'Люк де Йонг', number:9, target:{x:0,y:1.2}, direction:'по центру', saved:false, scouting:[0,1,1]},
-  ],
-};
+// Actual shoot-outs. Only goalkeeper saves count toward the benchmark.
+export const KEEPER_BENCHMARKS = [
+  {
+    id:'martinez', name:'Эмилиано Мартинес', match:'Нидерланды · ЧМ-2022',
+    shots:[
+      ['Вирджил ван Дейк','save'], ['Стевен Бергёйс','save'], ['Тён Копмейнерс','goal'],
+      ['Ваут Вегхорст','goal'], ['Люк де Йонг','goal'],
+    ],
+  },
+  {
+    id:'subasic', name:'Даниел Субашич', match:'Дания · ЧМ-2018',
+    shots:[
+      ['Кристиан Эриксен','save'], ['Симон Кьер','goal'], ['Микаэль Крон-Дели','goal'],
+      ['Лассе Шёне','save'], ['Николай Йоргенсен','save'],
+    ],
+  },
+  {
+    id:'pickford', name:'Джордан Пикфорд', match:'Колумбия · ЧМ-2018',
+    shots:[
+      ['Радамель Фалькао','goal'], ['Хуан Куадрадо','goal'], ['Луис Мурьель','goal'],
+      ['Матеус Урибе','miss'], ['Карлос Бакка','save'],
+    ],
+  },
+];

@@ -9,28 +9,32 @@ const clamp=T.MathUtils.clamp, lerp=T.MathUtils.lerp, smooth=u=>{u=clamp(u,0,1);
 const canvas=$('game'), arena=$('arena');
 const platform=document.body.dataset.platform;
 const tvMode=platform==='tv';
-const webMode=platform==='web';
-const seriesScreen=tvMode||webMode;
-const series=webMode?(await import('./web-series.js')).initWebSeries()
-  :tvMode?(await import('./tv-series.js')).initSeries():null;
+const seriesScreen=tvMode||platform==='web';
+const series=seriesScreen?(await import('./web-series.js')).initWebSeries():null;
 function showLoadingError(message){
   if($('loading-message'))window.dispatchEvent(new CustomEvent('penalty-load-error',{detail:message}));
   else $('loading').textContent=message;
 }
 const audio=new StadiumAudio(),soundEvents=[];
 try{audio.enabled=localStorage.getItem('penalty-sound-enabled')!=='false';}catch{}
+if(seriesScreen)audio.attachStadium();
 function sound(name){soundEvents.push({name,time,attempt:state.attempts});if(soundEvents.length>100)soundEvents.shift();audio.play(name);}
 function updateSoundButton(){const b=$('sound');b.setAttribute('aria-pressed',String(audio.enabled));b.setAttribute('aria-label',audio.enabled?'Выключить звук':'Включить звук');b.textContent=audio.enabled?'♪ ВКЛ':'♪ ВЫКЛ';}
 updateSoundButton();
 for(const event of ['pointerdown','keydown'])document.addEventListener(event,e=>{if(e.isTrusted)audio.unlock();},{capture:true});
-$('sound').addEventListener('click',()=>{audio.setEnabled(!audio.enabled);updateSoundButton();try{localStorage.setItem('penalty-sound-enabled',String(audio.enabled));}catch{}});
+$('pair-sound')?.addEventListener('click',()=>audio.unlock());
+$('sound').addEventListener('click',()=>{
+  audio.setEnabled(audio.blocked||!audio.enabled);
+  updateSoundButton();
+  try{localStorage.setItem('penalty-sound-enabled',String(audio.enabled));}catch{}
+});
 let renderer;
 try{renderer=new T.WebGLRenderer({canvas,antialias:!seriesScreen,alpha:false,powerPreference:'high-performance'});}catch(error){showLoadingError(tvMode?'Для игры нужен Android System WebView с поддержкой WebGL 2.':'Полю нужен WebGL 2. Откройте игру в обновлённом браузере с включённым аппаратным ускорением.');throw error;}
 renderer.setPixelRatio(Math.min(devicePixelRatio,seriesScreen?1:2));
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
 renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
 const scene=new T.Scene();
-const sceneColor=webMode?'#11191a':'#afc4b0';
+const sceneColor=seriesScreen?'#11191a':'#afc4b0';
 scene.background=new T.Color(sceneColor);
 scene.fog=new T.Fog(sceneColor,35,80);
 const camera=new T.PerspectiveCamera(40,1,.1,120);
@@ -38,8 +42,8 @@ const cameraViews=[{p:V(0,1.8,-12),look:V(0,1.22,-6.5)},{p:V(2.2,1.9,-12),look:V
 // From behind the goal, positive world X appears on the left of the screen.
 const screenDirection=()=>camera.position.z< -6.5?-1:1;
 let view=0;camera.position.copy(cameraViews[0].p);camera.lookAt(cameraViews[0].look);
-scene.add(new T.HemisphereLight('#fcf5df','#496e4c',webMode?1.6:2.6));
-const sun=new T.DirectionalLight('#fff1ca',webMode?2.85:3.7);sun.position.set(-12,19,10);sun.castShadow=true;
+scene.add(new T.HemisphereLight('#fcf5df','#496e4c',seriesScreen?1.6:2.6));
+const sun=new T.DirectionalLight('#fff1ca',seriesScreen?2.85:3.7);sun.position.set(-12,19,10);sun.castShadow=true;
 const shadowSize=seriesScreen?768:2048;
 sun.shadow.mapSize.set(shadowSize,shadowSize);Object.assign(sun.shadow.camera,{left:-17,right:17,top:20,bottom:-18,near:1,far:65});sun.shadow.normalBias=.035;sun.shadow.bias=-.0001;sun.shadow.radius=4;scene.add(sun);
 const mat=(color,extra={})=>new T.MeshStandardMaterial({color,roughness:.85,...extra});
@@ -47,7 +51,7 @@ const green=mat('#53795b'),darkGreen=mat('#456c52'),white=mat('#f0f0d4'),wood=ma
 function box(w,h,d,m,x,y,z){const o=new T.Mesh(new T.BoxGeometry(w,h,d),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;scene.add(o);return o;}
 function cylinder(a,b,r,m,parent=scene){a=Array.isArray(a)?V(...a):a;b=Array.isArray(b)?V(...b):b;const delta=b.clone().sub(a);const o=new T.Mesh(new T.CylinderGeometry(r,r,delta.length(),8),m);o.position.copy(a).add(b).multiplyScalar(.5);o.quaternion.setFromUnitVectors(V(0,1,0),delta.normalize());o.castShadow=true;parent.add(o);return o;}
 // A small neighbourhood ground, with broad mowing stripes and painted markings.
-box(webMode?125:23,.4,webMode?100:34,mat(webMode?'#3c4e25':'#8ba37c'),0,-.31,0);
+box(seriesScreen?125:23,.4,seriesScreen?100:34,mat(seriesScreen?'#3c4e25':'#8ba37c'),0,-.31,0);
 box(19,.13,29,green,0,-.055,0);
 for(let i=0;i<12;i++)box(18.9,.012,2.4,i%2?green:darkGreen,0,.018,-13.2+i*2.4);
 function line(points,color='#dae6c6',opacity=1){const o=new T.Line(new T.BufferGeometry().setFromPoints(points.map(p=>V(...p))),new T.LineBasicMaterial({color,transparent:opacity<1,opacity}));scene.add(o);return o;}
@@ -66,7 +70,7 @@ for(let x=-GW;x<=GW+.01;x+=.245)seg([x,GH,GZ],[x,GH,GZ-.5]);
 for(let z=GZ-.5;z<GZ;z+=.17)seg([-GW,GH,z],[GW,GH,z]);
 for(const x of [-GW,GW]){cylinder([x,.04,GZ-1.65],[x,GH,GZ-.5],.025,steel);cylinder([x,GH,GZ],[x,GH,GZ-.5],.025,steel);for(let y=.1;y<=GH;y+=.2)seg([x,y,GZ],[x,y,GZ-1.65+1.15*y/GH]);for(let i=0;i<=8;i++){const u=i/8;seg([x,.05,GZ-1.65*u],[x,GH,GZ-.5*u]);}}
 const netGeo=new T.BufferGeometry();netGeo.setAttribute('position',new T.Float32BufferAttribute(netPoints,3));const net=new T.LineSegments(netGeo,new T.LineBasicMaterial({color:'#eef4df',transparent:true,opacity:.16}));scene.add(net);
-if(webMode){
+if(seriesScreen){
   const texture=new T.TextureLoader().load('./assets/web-stadium.webp');
   texture.colorSpace=T.SRGBColorSpace;
   const stand=new T.Mesh(new T.PlaneGeometry(128,24),new T.MeshBasicMaterial({map:texture,side:T.DoubleSide,toneMapped:false,fog:false}));
@@ -95,18 +99,18 @@ for(let i=0;i<ico.count;i++){const p=V().fromBufferAttribute(ico,i);if(seen.some
 const ballStart=V(.25,BALL_RADIUS+.005,4.45);ball.position.copy(ballStart);
 const halo=new T.Mesh(new T.RingGeometry(.52,.55,48),new T.MeshBasicMaterial({color:'#e9f5b1',transparent:true,opacity:.45,side:T.DoubleSide}));halo.rotation.x=-Math.PI/2;halo.position.set(.25,.045,4.45);scene.add(halo);
 const zoneLayer=$('target-layer');
-const zoneButtons=webMode?[]:ZONES.map(zone=>{
+const zoneButtons=seriesScreen?[]:ZONES.map(zone=>{
   const b=document.createElement('span');b.className='target-zone '+(zone.hands===1?'one-hand':'two-hands');
   b.innerHTML=`<strong>${zone.key}</strong><small>${zone.ru.toUpperCase()}</small>`;
   b.setAttribute('aria-label',`${zone.key} / ${zone.ru}: ${zone.label}, ${zone.hands===1?'одна рука':'прыжок двумя руками'}`);
   b.title=b.getAttribute('aria-label');zoneLayer.append(b);return b;
 });
 function updateZoneMarkers(){
-  if(webMode)return;
+  if(seriesScreen)return;
   const w=arena.clientWidth,h=arena.clientHeight;
   for(const zone of ZONES){const p=V(zone.x,zone.y,zone.z).project(camera),b=zoneButtons[zone.index];
     b.style.left=(p.x*.5+.5)*w+'px';b.style.top=(-p.y*.5+.5)*h+'px';
-    b.classList.toggle('incoming',!series&&state.shotZone===zone.index&&['runup','flight'].includes(state.phase));
+    b.classList.toggle('incoming',state.shotZone===zone.index&&['runup','flight'].includes(state.phase));
     b.classList.toggle('defending',state.defense?.index===zone.index);
   }
 }
@@ -209,14 +213,14 @@ function finish(saved){
   if(saved){state.saves++;sound('save');sound('applause');}
   else{state.goals++;sound('net');sound('cheer');}
   score();
-  $('result-title').textContent=saved?(webMode?'СЕЙВ!':'ВОТ ЭТО СЕЙВ!'):'ГОЛ!';
+  $('result-title').textContent=saved?(seriesScreen?'СЕЙВ!':'ВОТ ЭТО СЕЙВ!'):'ГОЛ!';
   $('result-sub').textContent=saved?'ВОРОТА ПОД ЗАЩИТОЙ':'СЛЕДУЮЩИЙ МЯЧ — ТВОЙ';
   result.classList.toggle('goal',!saved);
   result.classList.add('show');
   state.phase='result';state.phaseTime=0;
   updateShotMarker();
   setLabel(saved?'МЯЧ ОТБИТ':'МЯЧ В СЕТКЕ');
-  if(series?.record(saved,state.shotZone,state.defense?.index)&&!webMode)state.auto=false;
+  series?.record(saved,state.shotZone);
 }
 function pointSegmentDistance(p,a,b){const ab=b.clone().sub(a),u=clamp(p.clone().sub(a).dot(ab)/ab.lengthSq(),0,1);return p.distanceTo(a.addScaledVector(ab,u));}
 function touchesKeeper(p){
@@ -304,7 +308,7 @@ function update(dt){
 function fitGoalCamera(){
   camera.updateMatrixWorld(true);
   let tangent=0;
-  const playerPanel=webMode&&arena.clientWidth>720;
+  const playerPanel=seriesScreen&&arena.clientWidth>720;
   const goalWidth=playerPanel?.66:.96;
   // Fit the front posts almost to the side edges, retaining the whole goal on
   // wide screens too. Keep the camera itself at the keeper's head height.
@@ -315,7 +319,7 @@ function fitGoalCamera(){
   camera.fov=T.MathUtils.radToDeg(2*Math.atan(tangent));
   camera.filmOffset=playerPanel?-.28*camera.getFilmWidth()*tangent*camera.aspect:0;
   camera.updateProjectionMatrix();
-  if(webMode){
+  if(seriesScreen){
     placeGoalMap();
     updateShotMarker();
   }
@@ -335,15 +339,27 @@ function placeGoalMap(){
 }
 function resize(){const w=arena.clientWidth,h=arena.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;fitGoalCamera();}
 new ResizeObserver(resize).observe(arena);resize();
-function frame(now){const dt=Math.min((now-last)/1000,seriesScreen?.12:.05);last=now;update(dt);updateZoneMarkers();renderer.render(scene,camera);requestAnimationFrame(frame);}
+const pairSound=$('pair-sound');
+function frame(now){
+  const dt=Math.min((now-last)/1000,seriesScreen?.12:.05);
+  last=now;update(dt);updateZoneMarkers();
+  if(seriesScreen){
+    audio.setScene(document.hidden?'silent':state.auto?'field':'menu');
+    pairSound.hidden=!audio.enabled||!audio.blocked;
+  }
+  renderer.render(scene,camera);requestAnimationFrame(frame);
+}
 requestAnimationFrame(frame);
-document.addEventListener('visibilitychange',()=>{last=performance.now();releaseControls();if(document.hidden)audio.stop();});
+document.addEventListener('visibilitychange',()=>{last=performance.now();releaseControls();if(document.hidden){audio.stop();audio.setScene('silent');}});
 canvas.addEventListener('pointerdown',()=>canvas.focus({preventScroll:true}));
 window.addEventListener('keydown',e=>{
   if(seriesScreen){
-    if(tvMode&&!$('phone-dialog').open&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+    if(tvMode&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+      const dialog=$('phone-dialog');
+      const controls=dialog.open?dialog:document.querySelector('.broadcast-controls');
+      const buttons=[...controls.querySelectorAll('button:not([hidden]):not(:disabled)')];
+      if(!buttons.length)return;
       e.preventDefault();
-      const buttons=[...document.querySelectorAll('.header-right button:not(:disabled)')];
       const current=buttons.indexOf(document.activeElement);
       const direction=['ArrowLeft','ArrowUp'].includes(e.key)?-1:1;
       const next=current<0?0:(current+direction+buttons.length)%buttons.length;
@@ -375,11 +391,6 @@ function setMotionPose(pose){
   $('control-hint').textContent=pose.zone===null?'Вратарь повторяет движения рук':`Камера · ${ZONES[pose.zone].ru.toUpperCase()} · ${ZONES[pose.zone].hands===1?'одна рука':'прыжок двумя руками'}`;return true;
 }
 $('reset').addEventListener('click',resetGame);
-$('series-mode')?.addEventListener('click',()=>{
-  pauseAuto();
-  series.switchMode();
-  resetGame();
-});
 $('view').addEventListener('click',()=>{view=(view+1)%cameraViews.length;camera.position.copy(cameraViews[view].p);camera.lookAt(cameraViews[view].look);fitGoalCamera();});
 $('fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{setLabel('ПОЛНОЭКРАННЫЙ РЕЖИМ НЕДОСТУПЕН');}});
 // Transport-independent boundary for the later phone / pose-tracking connection.
@@ -397,21 +408,21 @@ window.penalty={
   defend,reset:resetGame,
   setMotionPose,stopMotion,pauseAuto,
   startAuto(){
-    if(webMode&&state.phase==='result')return;
+    if(seriesScreen&&state.phase==='result')return;
     if(series?.complete)resetGame();
-    if(tvMode&&audio.enabled)audio.unlock();
+    if(audio.enabled)audio.unlock();
     state.auto=true;$('auto').checked=true;state.nextAuto=time+(series?5:1);
   },
   getZones:()=>structuredClone(ZONES),
   shoot:target=>shoot(target),
-  getSoundState:()=>({enabled:audio.enabled,context:audio.context?.state??'locked',events:structuredClone(soundEvents)}),
+  getSoundState:()=>({enabled:audio.enabled,context:audio.context?.state??'locked',scene:audio.scene,playing:Object.entries(audio.clips??{}).filter(([,clip])=>!clip.paused&&clip.currentTime>0).map(([name])=>name),events:structuredClone(soundEvents)}),
   getState:()=>({ready,auto:state.auto,phase:state.phase,whistleLead:state.whistleLead,saves:state.saves,goals:state.goals,attempts:state.attempts,keeperX:state.keeperX,input:state.source,ball:ball.position.toArray(),ballRadius:BALL_RADIUS,shotZone:state.shotZone,defense:state.defense?{index:state.defense.index,hands:ZONES[state.defense.index].hands}:null,outcome:state.outcome,seriesComplete:series?.complete??false}),
 };
 try{
   const gltf=await new GLTFLoader().loadAsync('./assets/ball-man.glb');
-  keeper=new Actor(gltf.scene,webMode?'#7eb9ad':'#f7efcf',webMode?.70:.50);
-  kicker=new Actor(gltf.scene,webMode?'#ff7930':'#e7b078');
-  if(webMode){
+  keeper=new Actor(gltf.scene,seriesScreen?'#7eb9ad':'#f7efcf',seriesScreen?.70:.50);
+  kicker=new Actor(gltf.scene,seriesScreen?'#ff7930':'#e7b078');
+  if(seriesScreen){
     const numberCanvas=document.createElement('canvas');
     numberCanvas.width=numberCanvas.height=128;
     const texture=new T.CanvasTexture(numberCanvas);
