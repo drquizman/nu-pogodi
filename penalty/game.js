@@ -235,7 +235,7 @@ function touchesKeeper(p){
 }
 function keeperPose(t,dt){
   const external=state.pose&&performance.now()-state.poseAt<(state.source==='motion'?1600:500);
-  if(!external&&['pose','motion'].includes(state.source)){if(state.source==='motion')stopMotion();else{state.source='manual';state.pose=null;state.targetX=0;}$('control-hint').textContent='Сигнал позы потерян · доступны 12 клавиш';}
+  if(!external&&['pose','motion'].includes(state.source)){if(state.source==='motion')stopMotion(!seriesScreen);else{state.source='manual';state.pose=null;state.targetX=0;}$('control-hint').textContent='Сигнал позы потерян · доступны 12 клавиш';}
   let defense=state.defense,weight=0,zone=null;
   if(defense){
     const end=defense.releaseAt===null?Infinity:Math.max(defense.start+1.7,defense.releaseAt+.30);
@@ -287,7 +287,8 @@ function kickerPose(t){
 function update(dt){
   time+=dt;if(!ready)return;
   state.phaseTime+=dt;keeperPose(time,dt);kickerPose(time);
-  if(state.phase==='ready'&&state.auto&&time>=state.nextAuto)shoot(series?.nextShot());
+  const liveMotion=state.source==='motion'&&state.pose?.held===false&&performance.now()-state.poseAt<1000;
+  if(state.phase==='ready'&&state.auto&&time>=state.nextAuto&&(!seriesScreen||liveMotion))shoot(series?.nextShot());
   if(state.phase==='runup'&&state.phaseTime>=state.whistleLead)release();
   if(state.phase==='flight'||state.phase==='result'){
     for(let remaining=dt;remaining>0;){const step=Math.min(remaining,1/180);remaining-=step;state.flightTime+=step;ball.position.addScaledVector(state.velocity,step);state.velocity.y-=9.8*step;
@@ -381,12 +382,16 @@ window.addEventListener('blur',releaseControls);
 shootButton.addEventListener('click',()=>shoot());$('auto').addEventListener('change',e=>{state.auto=e.target.checked;state.nextAuto=time+1;});
 function resetGame(){audio.stop();state.saves=0;state.goals=0;state.attempts=0;score();state.targetX=0;state.keeperX=0;lastKeeperX=0;state.jumpStart=-100;state.pose=null;state.source='manual';$('control-hint').textContent='12 клавиш = 12 точек в воротах';series?.restart();resetBall();}
 function pauseAuto(){state.auto=false;$('auto').checked=false;if(['runup','flight'].includes(state.phase)){audio.stop();resetBall();}}
-function stopMotion(){if(state.source!=='motion')return;state.pose=null;state.defense=null;state.targetX=0;state.source='manual';pauseAuto();}
+function stopMotion(pause=true){
+  if(state.source!=='motion')return;
+  state.pose=null;state.defense=null;state.targetX=0;state.source='manual';
+  if(pause)pauseAuto();
+}
 function setMotionPose(pose){
-  if(!pose||pose.tracked!==true){stopMotion();return false;}
+  if(!pose||pose.tracked!==true){stopMotion(!seriesScreen);return false;}
   if(pose.zone!==null&&(!Number.isInteger(pose.zone)||pose.zone<0||pose.zone>11))return false;
   for(const key of ['leftHand','rightHand']){const h=pose[key];if(!h||!['x','y','z'].every(a=>Number.isFinite(h[a])))return false;}
-  const previous=state.source;state.pose={x:0,leftHand:{...pose.leftHand},rightHand:{...pose.rightHand}};state.poseAt=performance.now();state.source='motion';state.targetX=0;
+  const previous=state.source;state.pose={x:0,leftHand:{...pose.leftHand},rightHand:{...pose.rightHand},held:pose.held===true};state.poseAt=performance.now();state.source='motion';state.targetX=0;
   if(pose.zone===null)state.defense=null;
   else if(previous!=='motion'||state.defense?.index!==pose.zone)state.defense={index:pose.zone,start:time,releaseAt:null};
   $('control-hint').textContent=pose.zone===null?'Вратарь повторяет движения рук':`Камера · ${ZONES[pose.zone].ru.toUpperCase()} · ${ZONES[pose.zone].hands===1?'одна рука':'прыжок двумя руками'}`;return true;
